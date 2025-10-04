@@ -3,14 +3,22 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "upload": "tsx upload-to-readwise.ts"
+    "upload": "tsx src/upload-to-readwise.ts",
+    "db:init": "prisma generate && prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "db:studio": "prisma studio"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.2"
+    "typescript": "^5.7.2"
   },
   "dependencies": {
-    "marked": "^15.0.4"
+    "@prisma/client": "^6.16.3",
+    "dotenv": "^16.4.7",
+    "marked": "^15.0.4",
+    "openai": "^6.1.0",
+    "prisma": "^6.16.3"
   }
 }
