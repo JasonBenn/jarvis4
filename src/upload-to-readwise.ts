@@ -113,8 +113,9 @@ async function uploadToReadwise() {
       console.log('💾 Saved thumbnail to database');
     }
 
-    // Convert markdown to HTML
-    const html = await marked(markdown);
+    // Convert markdown to HTML and convert H3s to H2s
+    let html = await marked(markdown);
+    html = html.replace(/<h3>/g, '<h2>').replace(/<\/h3>/g, '</h2>');
 
     // Upload to Readwise Reader
     const response = await fetch('https://readwise.io/api/v3/save/', {
@@ -131,7 +132,7 @@ async function uploadToReadwise() {
         image_url: imageUrl,
         tags: ['now-reading'],
         category: 'article',
-        should_clean_html: true,
+        should_clean_html: false,
       }),
     });
 
