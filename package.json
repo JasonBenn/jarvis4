@@ -7,7 +7,8 @@
     "db:init": "prisma generate --schema=db/schema.prisma && prisma db push --schema=db/schema.prisma",
     "db:migrate": "prisma migrate dev --schema=db/schema.prisma",
     "db:reset": "prisma migrate reset --schema=db/schema.prisma",
-    "db:studio": "prisma studio --schema=db/schema.prisma"
+    "db:studio": "prisma studio --schema=db/schema.prisma",
+    "install-alias": "grep -q 'alias worldview-upload=' ~/.bash_profile 2>/dev/null && sed -i '' '/alias worldview-upload=/d' ~/.bash_profile; echo \"alias worldview-upload='cd $PWD && pnpm upload'\" >> ~/.bash_profile && echo 'Alias installed! Run: source ~/.bash_profile'"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
