@@ -1,0 +1,16 @@
+{
+  "name": "readwise-uploader",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "upload": "tsx upload-to-readwise.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
+  },
+  "dependencies": {
+    "marked": "^15.0.4"
+  }
+}
