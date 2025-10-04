@@ -131,7 +131,7 @@ async function uploadToReadwise() {
         image_url: imageUrl,
         tags: ['now-reading'],
         category: 'article',
-        should_clean_html: false,
+        should_clean_html: true,
       }),
     });
 
