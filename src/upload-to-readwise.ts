@@ -90,13 +90,20 @@ async function uploadToReadwise() {
 
       // Delete old document if it exists
       if (existingImage.documentId) {
-        console.log('🗑️  Deleting old document...');
-        await fetch(`https://readwise.io/api/v3/delete/${existingImage.documentId}/`, {
+        console.log(`🗑️  Deleting old document ${existingImage.documentId}...`);
+        const deleteResponse = await fetch(`https://readwise.io/api/v3/delete/${existingImage.documentId}/`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Token ${READWISE_TOKEN}`,
           },
         });
+
+        if (deleteResponse.ok) {
+          console.log('✅ Old document deleted');
+        } else {
+          const error = await deleteResponse.text();
+          console.warn(`⚠️  Failed to delete old document: ${deleteResponse.status} ${error}`);
+        }
       }
     } else {
       // Generate new thumbnail
