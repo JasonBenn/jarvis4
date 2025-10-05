@@ -12,9 +12,9 @@ sed -i.bak '/alias worldview-update=/d' "$BASH_PROFILE" 2>/dev/null || true
 
 # Add both aliases
 echo "alias worldview-upload='cd $PROJECT_DIR && pnpm upload'" >> "$BASH_PROFILE"
-echo "alias worldview-update='$PROJECT_DIR/cursor-compose.sh'" >> "$BASH_PROFILE"
+echo "alias worldview-update='$PROJECT_DIR/src/worldview-update.sh'" >> "$BASH_PROFILE"
 source ~/.bash_profile
 
 echo "✅ Aliases installed!"
-echo "  - worldview-upload        (upload to Readwise)"
-echo "  - worldview-update 'text' (open Cursor Compose)"
+echo "  - worldview-upload (upload to Readwise)"
+echo "  - worldview-update (open Cursor)"
