@@ -1,23 +1,46 @@
 {
   "name": "jarvis4-worldview-updater",
   "displayName": "Jarvis4 Worldview Updater",
-  "description": "",
-  "version": "0.0.1",
+  "description": "Integrate Readwise highlights into Cursor Compose workflow",
+  "version": "0.1.0",
+  "publisher": "jasonbenn",
   "engines": {
-    "vscode": "^1.104.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:readwise.fetchAndShow"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "jarvis4-worldview-updater.helloWorld",
-        "title": "Hello World"
+        "command": "readwise.fetchAndShow",
+        "title": "Readwise: Fetch and Show Highlights"
+      },
+      {
+        "command": "readwise.showPanel",
+        "title": "Readwise: Show Highlights Panel"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Readwise Highlights",
+      "properties": {
+        "readwise.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Your Readwise API token"
+        },
+        "readwise.snoozeDurationWeeks": {
+          "type": "number",
+          "default": 4,
+          "description": "Number of weeks to snooze a highlight (default: 4)",
+          "minimum": 1
+        }
+      }
+    }
   },
   "scripts": {
     "// DEVELOPMENT": "====================================",
@@ -26,31 +49,26 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
-
     "// BUILD & PACKAGE": "====================================",
     "build": "pnpm run compile",
     "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
     "vscode:prepublish": "pnpm run package",
-    "bundle": "pnpm run package && npx vsce package",
-
+    "bundle": "pnpm run package && npx @vscode/vsce package --no-dependencies",
     "// INSTALLATION": "====================================",
     "install:extension": "cursor --install-extension *.vsix",
     "install:local": "pnpm run bundle && pnpm run install:extension",
     "uninstall:extension": "cursor --uninstall-extension jasonbenn.jarvis4-worldview-updater",
     "reinstall": "pnpm run uninstall:extension; pnpm run install:local",
-
     "// CODE QUALITY": "====================================",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-
     "// TESTING": "====================================",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "test": "vscode-test",
-
     "// UTILITIES": "====================================",
     "clean": "rm -rf dist out *.vsix",
     "reset": "pnpm run clean && pnpm install",
@@ -59,7 +77,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "@types/vscode": "^1.104.0",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "@vscode/test-cli": "^0.0.11",
@@ -70,6 +88,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "readwise-reader-api": "^0.5.2"
+    "readwise-reader-api": "^0.5.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   }
 }

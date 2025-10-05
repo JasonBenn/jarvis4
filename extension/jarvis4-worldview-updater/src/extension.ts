@@ -1,26 +1,54 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as path from 'path';
+import { HighlightDatabase } from './database';
+import { ReadwiseClient } from './readwiseClient';
+import { WebviewManager } from './webview';
+import { registerCommands } from './commands';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+	console.log('Activating Jarvis4 Worldview Updater extension...');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "jarvis4-worldview-updater" is now active!');
+	// Initialize database (workspace-specific with fallback)
+	const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+	const dbPath = workspaceFolder
+		? path.join(workspaceFolder.uri.fsPath, 'db', 'readwise-highlights.db')
+		: path.join(context.globalStorageUri.fsPath, 'readwise-highlights.db');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('jarvis4-worldview-updater.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Jarvis4 Worldview Updater!');
+	const db = new HighlightDatabase(dbPath);
+	await db.initialize();
+
+	// Get API token from configuration
+	const config = vscode.workspace.getConfiguration('readwise');
+	const apiToken = config.get<string>('apiToken');
+
+	if (!apiToken) {
+		vscode.window.showWarningMessage(
+			'Readwise API token not configured. Please set readwise.apiToken in your settings.',
+			'Open Settings'
+		).then(selection => {
+			if (selection === 'Open Settings') {
+				vscode.commands.executeCommand('workbench.action.openSettings', 'readwise.apiToken');
+			}
+		});
+	}
+
+	// Initialize Readwise client
+	const readwise = new ReadwiseClient(apiToken || '');
+
+	// Initialize webview manager
+	const webviewManager = new WebviewManager(context, db);
+
+	// Register commands
+	registerCommands(context, db, readwise, webviewManager);
+
+	// Store in context for cleanup
+	context.subscriptions.push({
+		dispose: () => db.dispose()
 	});
 
-	context.subscriptions.push(disposable);
+	console.log('Jarvis4 Worldview Updater extension activated successfully');
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	console.log('Jarvis4 Worldview Updater extension deactivated');
+}
