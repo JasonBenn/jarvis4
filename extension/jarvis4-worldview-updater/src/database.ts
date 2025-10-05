@@ -53,7 +53,7 @@ export class HighlightDatabase {
          OR (next_show_date IS NOT NULL AND next_show_date <= datetime('now'))
       ORDER BY first_seen DESC
     `);
-    return rows.map(r => r.id);
+    return rows.map((r: { id: string }) => r.id);
   }
 
   async getHighlightState(id: string): Promise<HighlightState | null> {
