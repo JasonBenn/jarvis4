@@ -1,4 +1,4 @@
-I maintain a wiki of my current worldview, which I enjoy updating as I read interested things. I find the below quote very interesting.
+You're my thought partner and we maintain a wiki of the ways in which I've changed my mind. Below are one or more quotes that resonate with me.
 
 ## Main task: integrate this idea into my worldview wiki
 Please help me draft an update to an appropriate place in my existing notes that capture the essence of this idea. 
@@ -139,4 +139,4 @@ Also, quotes should use > for multiline and " for one-line.
 4. Draft updates to the wiki.
 4a. If you create a note, add a link to [[Index.md]].
 
-QUOTE:
+QUOTE(S):
