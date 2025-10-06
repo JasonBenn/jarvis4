@@ -18,11 +18,14 @@ export function registerCommands(
         cancellable: false
       }, async (progress) => {
         try {
-          // Get last fetch time from workspace state
-          const lastFetch = context.workspaceState.get<string>('lastReadwiseFetch');
+          // TODO: Once we have database persistence, use lastReadwiseFetch to only fetch new highlights
+          // For now, always fetch from last 30 days since database is in-memory and gets cleared on reload
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const lastFetch = thirtyDaysAgo.toISOString();
 
           // Fetch highlights
-          progress.report({ message: 'Downloading from Readwise...' });
+          progress.report({ message: 'Downloading from Readwise (last 30 days)...' });
           const highlightData = await readwise.fetchAllHighlightsWithBooks(lastFetch);
 
           // Store highlights in webview manager
@@ -33,15 +36,15 @@ export function registerCommands(
           let newCount = 0;
           for (const item of highlightData) {
             const highlightId = String(item.highlight.id);
-            const existingState = await db.getHighlightState(highlightId);
+            const existingState = db.getHighlightState(highlightId);
             if (!existingState) {
-              await db.trackHighlight(highlightId);
+              db.trackHighlight(highlightId);
               newCount++;
             }
           }
 
-          // Update last fetch time
-          await context.workspaceState.update('lastReadwiseFetch', new Date().toISOString());
+          // Don't update lastReadwiseFetch until we have database persistence
+          // Otherwise second fetch will get 0 results since database was cleared on reload
 
           // Show webview
           await webview.show();

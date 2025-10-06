@@ -3,6 +3,7 @@
   let highlights = [];
   let selectedIndex = 0;
   let expandedIds = new Set();
+  let checkedIds = new Set();
 
   window.addEventListener('message', event => {
     const message = event.data;
@@ -25,8 +26,9 @@
     }
 
     container.innerHTML = highlights.map((h, i) => {
-      const isSelected = i === selectedIndex;
+      const isFocused = i === selectedIndex;
       const isExpanded = expandedIds.has(h.id);
+      const isChecked = checkedIds.has(h.id);
       const preview = h.text.slice(0, 100) + (h.text.length > 100 ? '...' : '');
       const fullText = h.text;
       const source = h.source_author
@@ -38,9 +40,12 @@
       const snoozeCount = h.snooze_count > 0 ? `(Snoozed ${h.snooze_count}x)` : '';
 
       return `
-        <div class="highlight ${isSelected ? 'selected' : ''}" data-index="${i}">
+        <div class="highlight ${isFocused ? 'focused' : ''} ${isChecked ? 'checked' : ''}" data-index="${i}">
           <div class="highlight-header">
-            <div class="highlight-source">${source} ${snoozeCount}</div>
+            <div class="highlight-source">
+              <span class="checkbox">${isChecked ? '☑' : '☐'}</span>
+              ${source} ${snoozeCount}
+            </div>
             <div class="highlight-date">${date}</div>
           </div>
           <div class="highlight-text">
@@ -50,10 +55,10 @@
       `;
     }).join('');
 
-    // Scroll selected into view
-    const selectedEl = container.querySelector('.selected');
-    if (selectedEl) {
-      selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Scroll focused into view
+    const focusedEl = container.querySelector('.focused');
+    if (focusedEl) {
+      focusedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }
 
@@ -75,19 +80,39 @@
       case ' ':
         e.preventDefault();
         const id = highlights[selectedIndex].id;
-        if (expandedIds.has(id)) {
-          expandedIds.delete(id);
+        // Toggle checked state
+        if (checkedIds.has(id)) {
+          checkedIds.delete(id);
         } else {
-          expandedIds.add(id);
+          checkedIds.add(id);
+        }
+        render();
+        break;
+      case 'x':
+      case 'X':
+        e.preventDefault();
+        // Expand/collapse focused highlight
+        const expandId = highlights[selectedIndex].id;
+        if (expandedIds.has(expandId)) {
+          expandedIds.delete(expandId);
+        } else {
+          expandedIds.add(expandId);
         }
         render();
         break;
       case 'Enter':
         e.preventDefault();
+        // Integrate all checked highlights (or just focused one if none checked)
+        const idsToIntegrate = checkedIds.size > 0
+          ? Array.from(checkedIds)
+          : [highlights[selectedIndex].id];
+
         vscode.postMessage({
           type: 'integrate',
-          highlightId: highlights[selectedIndex].id
+          highlightIds: idsToIntegrate
         });
+        // Clear checked after integrating
+        checkedIds.clear();
         break;
       case 's':
       case 'S':

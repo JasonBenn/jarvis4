@@ -52,7 +52,7 @@ export class WebviewManager {
       async message => {
         switch (message.type) {
           case 'integrate':
-            await this.handleIntegrate(message.highlightId);
+            await this.handleIntegrate(message.highlightIds || [message.highlightId]);
             break;
           case 'snooze':
             await this.handleSnooze(message.highlightId);
@@ -106,10 +106,7 @@ export class WebviewManager {
     });
   }
 
-  private async handleIntegrate(highlightId: string): Promise<void> {
-    const item = this.highlights.find(h => String(h.highlight.id) === highlightId);
-    if (!item) {return;}
-
+  private async handleIntegrate(highlightIds: string[]): Promise<void> {
     // Read the worldview-update prompt template (bundled in extension)
     const promptPath = vscode.Uri.joinPath(
       this.context.extensionUri,
@@ -119,12 +116,19 @@ export class WebviewManager {
     const promptDoc = await vscode.workspace.openTextDocument(promptPath);
     const basePrompt = promptDoc.getText();
 
-    // Build full prompt with highlight appended (in memory only)
-    const highlightText = this.formatHighlight(item);
-    const fullPrompt = `${basePrompt}\n\n${highlightText}`;
+    // Build full prompt with all highlights appended
+    const highlightTexts = highlightIds
+      .map(id => this.highlights.find(h => String(h.highlight.id) === id))
+      .filter(item => item !== undefined)
+      .map(item => this.formatHighlight(item!))
+      .join('\n\n');
 
-    // Update status in DB
-    await this.db.updateStatus(highlightId, 'INTEGRATED');
+    const fullPrompt = `${basePrompt}\n\n${highlightTexts}`;
+
+    // Update status in DB for all
+    for (const id of highlightIds) {
+      await this.db.updateStatus(id, 'INTEGRATED');
+    }
 
     // Paste to Compose
     await this.pasteToCompose(fullPrompt);

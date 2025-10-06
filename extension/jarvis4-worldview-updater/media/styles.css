@@ -42,10 +42,23 @@ body {
   background-color: var(--vscode-list-hoverBackground);
 }
 
-.highlight.selected {
+.highlight.focused {
   background-color: var(--vscode-list-activeSelectionBackground);
   border-color: var(--vscode-focusBorder);
-  box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+  box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+  transform: scale(1.01);
+}
+
+.highlight.checked {
+  background-color: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-textLink-activeForeground);
+  border-width: 2px;
+  border-left-width: 4px;
+}
+
+.highlight.focused.checked {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  box-shadow: 0 0 0 2px var(--vscode-textLink-activeForeground);
 }
 
 .highlight-header {
@@ -59,6 +72,14 @@ body {
 .highlight-source {
   font-weight: 600;
   color: var(--vscode-textLink-foreground);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checkbox {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .highlight-date {
@@ -103,8 +124,8 @@ body {
 }
 
 /* Keyboard shortcuts hint */
-.highlight.selected::after {
-  content: "↑↓: Navigate • Space: Expand • Enter: Integrate • S: Snooze • Backspace: Archive";
+.highlight.focused::after {
+  content: "↑↓: Navigate • Space: Check • X: Expand • Enter: Integrate • S: Snooze • Backspace: Archive";
   display: block;
   margin-top: 8px;
   padding-top: 8px;
