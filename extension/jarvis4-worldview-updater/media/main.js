@@ -29,8 +29,6 @@
       const isFocused = i === selectedIndex;
       const isExpanded = expandedIds.has(h.id);
       const isChecked = checkedIds.has(h.id);
-      const preview = h.text.slice(0, 100) + (h.text.length > 100 ? '...' : '');
-      const fullText = h.text;
       const source = h.source_author
         ? `${h.source_title} by ${h.source_author}`
         : h.source_title || 'Unknown';
@@ -48,8 +46,8 @@
             </div>
             <div class="highlight-date">${date}</div>
           </div>
-          <div class="highlight-text">
-            ${isExpanded ? fullText : preview}
+          <div class="highlight-text ${isExpanded ? '' : 'collapsed'}">
+            ${h.text}
           </div>
         </div>
       `;
@@ -80,23 +78,15 @@
       case ' ':
         e.preventDefault();
         const id = highlights[selectedIndex].id;
-        // Toggle checked state
+        // Space toggles both expand AND check together
         if (checkedIds.has(id)) {
+          // Collapse and uncheck
           checkedIds.delete(id);
+          expandedIds.delete(id);
         } else {
+          // Expand and check
           checkedIds.add(id);
-        }
-        render();
-        break;
-      case 'x':
-      case 'X':
-        e.preventDefault();
-        // Expand/collapse focused highlight
-        const expandId = highlights[selectedIndex].id;
-        if (expandedIds.has(expandId)) {
-          expandedIds.delete(expandId);
-        } else {
-          expandedIds.add(expandId);
+          expandedIds.add(id);
         }
         render();
         break;

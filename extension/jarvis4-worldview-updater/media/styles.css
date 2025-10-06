@@ -29,13 +29,14 @@ body {
 }
 
 .highlight {
-  border: 1px solid var(--vscode-panel-border);
+  border: 2px solid var(--vscode-panel-border);
+  border-left-width: 4px;
   border-radius: 4px;
   padding: 12px;
   margin-bottom: 8px;
   background-color: var(--vscode-editor-background);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .highlight:hover {
@@ -45,20 +46,17 @@ body {
 .highlight.focused {
   background-color: var(--vscode-list-activeSelectionBackground);
   border-color: var(--vscode-focusBorder);
-  box-shadow: 0 0 0 2px var(--vscode-focusBorder);
-  transform: scale(1.01);
+  border-left-color: var(--vscode-focusBorder);
 }
 
 .highlight.checked {
   background-color: var(--vscode-list-hoverBackground);
-  border-color: var(--vscode-textLink-activeForeground);
-  border-width: 2px;
-  border-left-width: 4px;
+  border-left-color: var(--vscode-textLink-activeForeground);
 }
 
 .highlight.focused.checked {
   background-color: var(--vscode-list-activeSelectionBackground);
-  box-shadow: 0 0 0 2px var(--vscode-textLink-activeForeground);
+  border-left-color: var(--vscode-textLink-activeForeground);
 }
 
 .highlight-header {
@@ -92,6 +90,16 @@ body {
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.highlight-text.collapsed {
+  max-height: none;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .actions {
@@ -125,7 +133,7 @@ body {
 
 /* Keyboard shortcuts hint */
 .highlight.focused::after {
-  content: "↑↓: Navigate • Space: Check • X: Expand • Enter: Integrate • S: Snooze • Backspace: Archive";
+  content: "↑↓: Navigate • Space: Expand/Check • Enter: Integrate • S: Snooze • Backspace: Archive";
   display: block;
   margin-top: 8px;
   padding-top: 8px;
