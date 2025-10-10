@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Required parameters:
+# @raycast.schemaVersion 1
+# @raycast.title Jarvis Worldview
+# @raycast.mode fullOutput
+
+# Optional parameters:
+# @raycast.icon 🤖
+# @raycast.packageName Jarvis
+
 # Open Cursor with Neighborhood Notes directory and run Readwise extension
 
 NOTES_DIR="$HOME/notes/Neighborhood\ Notes"

@@ -6,6 +6,7 @@ BASH_PROFILE="$HOME/.bash_profile"
 
 # Remove old aliases if they exist
 sed -i.bak '/alias worldview=/d' "$BASH_PROFILE" 2>/dev/null || true
-echo "alias worldview='$PROJECT_DIR/src/worldview.sh'" >> "$BASH_PROFILE"
+sed -i.bak '/alias jarvis-worldview=/d' "$BASH_PROFILE" 2>/dev/null || true
+echo "alias jarvis-worldview='$PROJECT_DIR/src/worldview.sh'" >> "$BASH_PROFILE"
 source ~/.bash_profile
 echo "✅ Aliases installed!"

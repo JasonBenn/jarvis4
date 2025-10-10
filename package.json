@@ -10,8 +10,9 @@
     "db:studio": "prisma studio --schema=db/schema.prisma",
     "ext:db": "sqlite3 \"$HOME/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db\"",
     "ext:db:metadata": "pnpm run ext:db \"SELECT * FROM metadata;\"",
-    "ext:db:stats": "pnpm run ext:db \"SELECT status, COUNT(*) as count FROM highlight_states GROUP BY status; SELECT COUNT(*) as total_data FROM highlight_data;\"",
-    "install-alias": "./src/install-aliases.sh"
+    "ext:db:highlights": "pnpm run ext:db \"SELECT COUNT(*) FROM highlights;\"",
+    "install-alias": "./src/install-aliases.sh",
+    "install-raycast": "ln -sf \"$HOME/code/jarvis4/src/worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
