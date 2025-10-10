@@ -18,33 +18,40 @@ export function registerCommands(
         cancellable: false
       }, async (progress) => {
         try {
-          // TODO: Once we have database persistence, use lastReadwiseFetch to only fetch new highlights
-          // For now, always fetch from last 30 days since database is in-memory and gets cleared on reload
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const lastFetch = thirtyDaysAgo.toISOString();
+          // Use persistent lastReadwiseFetch or default to 30 days ago
+          const lastFetch = db.getLastReadwiseFetch() || (() => {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return thirtyDaysAgo.toISOString();
+          })();
 
           // Fetch highlights
-          progress.report({ message: 'Downloading from Readwise (last 30 days)...' });
+          progress.report({ message: 'Downloading from Readwise...' });
           const highlightData = await readwise.fetchAllHighlightsWithBooks(lastFetch);
 
           // Store highlights in webview manager
           webview.setHighlights(highlightData);
 
-          // Track new highlights in database
+          // Track new highlights in database with full data
           progress.report({ message: 'Processing highlights...' });
           let newCount = 0;
           for (const item of highlightData) {
             const highlightId = String(item.highlight.id);
             const existingState = db.getHighlightState(highlightId);
             if (!existingState) {
-              db.trackHighlight(highlightId);
+              db.trackHighlight(highlightId, {
+                id: highlightId,
+                text: item.highlight.text,
+                highlighted_at: item.highlight.highlighted_at || null,
+                book_title: item.book.title || 'Unknown',
+                book_author: item.book.author || null
+              });
               newCount++;
             }
           }
 
-          // Don't update lastReadwiseFetch until we have database persistence
-          // Otherwise second fetch will get 0 results since database was cleared on reload
+          // Update lastReadwiseFetch now that we have persistence
+          db.setLastReadwiseFetch(new Date().toISOString());
 
           // Show webview
           await webview.show();

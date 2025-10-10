@@ -8,6 +8,9 @@
     "db:migrate": "prisma migrate dev --schema=db/schema.prisma",
     "db:reset": "prisma migrate reset --schema=db/schema.prisma",
     "db:studio": "prisma studio --schema=db/schema.prisma",
+    "ext:db": "sqlite3 \"$HOME/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db\"",
+    "ext:db:metadata": "pnpm run ext:db \"SELECT * FROM metadata;\"",
+    "ext:db:stats": "pnpm run ext:db \"SELECT status, COUNT(*) as count FROM highlight_states GROUP BY status; SELECT COUNT(*) as total_data FROM highlight_data;\"",
     "install-alias": "./src/install-aliases.sh"
   },
   "devDependencies": {

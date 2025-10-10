@@ -72,11 +72,13 @@
     "// UTILITIES": "====================================",
     "clean": "rm -rf dist out *.vsix",
     "reset": "pnpm run clean && pnpm install",
-    "prepare": "pnpm run compile"
+    "prepare": "pnpm run compile",
+    "test:persistence": "node test-persistence.js"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
+    "@types/sql.js": "^1.4.9",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
@@ -88,6 +90,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "readwise-reader-api": "^0.5.2"
+    "readwise-reader-api": "^0.5.2",
+    "sql.js": "^1.13.0"
   }
 }

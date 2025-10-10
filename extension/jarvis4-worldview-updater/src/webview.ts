@@ -82,22 +82,20 @@ export class WebviewManager {
   async refresh(): Promise<void> {
     if (!this.panel) {return;}
 
-    const visibleIds = await this.db.getVisibleHighlightIds();
+    // Get recent unprocessed highlights from database (most recent 30)
+    const recentHighlights = this.db.getRecentUnprocessedHighlights(30);
     const highlightsToShow: HighlightWithMeta[] = [];
 
-    for (const item of this.highlights) {
-      const highlightId = String(item.highlight.id);
-      if (visibleIds.includes(highlightId)) {
-        const snoozeCount = await this.db.getSnoozeCount(highlightId);
-        highlightsToShow.push({
-          id: highlightId,
-          text: item.highlight.text,
-          source_title: item.book.title,
-          source_author: item.book.author,
-          highlighted_at: item.highlight.highlighted_at,
-          snooze_count: snoozeCount
-        });
-      }
+    for (const data of recentHighlights) {
+      const snoozeCount = this.db.getSnoozeCount(data.id);
+      highlightsToShow.push({
+        id: data.id,
+        text: data.text,
+        source_title: data.book_title,
+        source_author: data.book_author || undefined,
+        highlighted_at: data.highlighted_at || undefined,
+        snooze_count: snoozeCount
+      });
     }
 
     this.panel.webview.postMessage({
@@ -116,18 +114,24 @@ export class WebviewManager {
     const promptDoc = await vscode.workspace.openTextDocument(promptPath);
     const basePrompt = promptDoc.getText();
 
-    // Build full prompt with all highlights appended
+    // Get highlights from database and format them
+    const recentHighlights = this.db.getRecentUnprocessedHighlights(100); // Get more to ensure we have all selected IDs
     const highlightTexts = highlightIds
-      .map(id => this.highlights.find(h => String(h.highlight.id) === id))
-      .filter(item => item !== undefined)
-      .map(item => this.formatHighlight(item!))
+      .map(id => recentHighlights.find(h => h.id === id))
+      .filter(data => data !== undefined)
+      .map(data => {
+        const source = data!.book_author
+          ? `${data!.book_title} by ${data!.book_author}`
+          : data!.book_title;
+        return `<highlight>\n${data!.text}\n— ${source}\n</highlight>`;
+      })
       .join('\n\n');
 
     const fullPrompt = `${basePrompt}\n\n${highlightTexts}`;
 
     // Update status in DB for all
     for (const id of highlightIds) {
-      await this.db.updateStatus(id, 'INTEGRATED');
+      this.db.updateStatus(id, 'INTEGRATED');
     }
 
     // Paste to Compose
@@ -141,12 +145,12 @@ export class WebviewManager {
     const config = vscode.workspace.getConfiguration('readwise');
     const durationWeeks = config.get<number>('snoozeDurationWeeks') || 4;
 
-    await this.db.snoozeHighlight(highlightId, durationWeeks);
+    this.db.snoozeHighlight(highlightId, durationWeeks);
     await this.refresh();
   }
 
   private async handleArchive(highlightId: string): Promise<void> {
-    await this.db.updateStatus(highlightId, 'ARCHIVED');
+    this.db.updateStatus(highlightId, 'ARCHIVED');
     await this.refresh();
   }
 
@@ -154,27 +158,19 @@ export class WebviewManager {
     const config = vscode.workspace.getConfiguration('readwise');
     const durationWeeks = config.get<number>('snoozeDurationWeeks') || 4;
 
-    const visibleIds = await this.db.getVisibleHighlightIds();
+    const visibleIds = this.db.getVisibleHighlightIds();
     for (const id of visibleIds) {
-      await this.db.snoozeHighlight(id, durationWeeks);
+      this.db.snoozeHighlight(id, durationWeeks);
     }
     await this.refresh();
   }
 
   private async handleArchiveAll(): Promise<void> {
-    const visibleIds = await this.db.getVisibleHighlightIds();
+    const visibleIds = this.db.getVisibleHighlightIds();
     for (const id of visibleIds) {
-      await this.db.updateStatus(id, 'ARCHIVED');
+      this.db.updateStatus(id, 'ARCHIVED');
     }
     await this.refresh();
-  }
-
-  private formatHighlight(item: { highlight: ReadwiseHighlight; book: ReadwiseBookHighlights }): string {
-    const source = item.book.author
-      ? `${item.book.title} by ${item.book.author}`
-      : item.book.title || 'Unknown Source';
-
-    return `<highlight>\n${item.highlight.text}\n— ${source}\n</highlight>`;
   }
 
   private async pasteToCompose(text: string): Promise<void> {

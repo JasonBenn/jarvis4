@@ -9,16 +9,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	try {
 		console.log('Activating Jarvis4 Worldview Updater extension...');
 
-		// Initialize database (workspace-specific with fallback)
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-		const dbPath = workspaceFolder
-			? path.join(workspaceFolder.uri.fsPath, 'db', 'readwise-highlights.db')
-			: path.join(context.globalStorageUri.fsPath, 'readwise-highlights.db');
+		// Initialize database (use globalStorageUri for workspace-agnostic persistence)
+		const storagePath = context.globalStorageUri.fsPath;
+		const dbPath = path.join(storagePath, 'readwise-highlights.db');
 
 		console.log('Database path:', dbPath);
 
 		const db = new HighlightDatabase(dbPath);
-		db.initialize();
+		await db.initialize();
 
 		// Get API token from configuration
 		const config = vscode.workspace.getConfiguration('readwise');

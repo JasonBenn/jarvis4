@@ -1,4 +1,6 @@
 const esbuild = require("esbuild");
+const fs = require("fs");
+const path = require("path");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -24,6 +26,7 @@ const esbuildProblemMatcherPlugin = {
 };
 
 async function main() {
+	// Build main extension
 	const ctx = await esbuild.context({
 		entryPoints: [
 			'src/extension.ts'
@@ -42,11 +45,39 @@ async function main() {
 			esbuildProblemMatcherPlugin,
 		],
 	});
+
+	// Build test exports (for CLI testing)
+	const testCtx = await esbuild.context({
+		entryPoints: [
+			'src/test-exports.ts'
+		],
+		bundle: true,
+		format: 'cjs',
+		minify: false,
+		sourcemap: false,
+		platform: 'node',
+		outfile: 'dist/test-exports.js',
+		logLevel: 'silent',
+	});
 	if (watch) {
 		await ctx.watch();
+		await testCtx.watch();
 	} else {
 		await ctx.rebuild();
+		await testCtx.rebuild();
 		await ctx.dispose();
+		await testCtx.dispose();
+
+		// Copy sql.js WASM file to dist
+		const wasmSource = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+		const wasmDest = path.join(__dirname, 'dist', 'sql-wasm.wasm');
+
+		if (fs.existsSync(wasmSource)) {
+			fs.copyFileSync(wasmSource, wasmDest);
+			console.log('✓ Copied sql-wasm.wasm to dist/');
+		} else {
+			console.warn('⚠ Warning: sql-wasm.wasm not found at', wasmSource);
+		}
 	}
 }
 

@@ -12,3 +12,6 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+
+# Include WASM file for sql.js
+!dist/sql-wasm.wasm
