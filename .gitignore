@@ -2,3 +2,5 @@
 node_modules
 db/dev.db
 dist
+.test-db
+.DS_Store
