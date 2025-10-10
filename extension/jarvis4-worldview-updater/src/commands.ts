@@ -32,20 +32,14 @@ export function registerCommands(
           // Store highlights in webview manager
           webview.setHighlights(highlightData);
 
-          // Track new highlights in database with full data
+          // Track new highlight IDs in database (no content)
           progress.report({ message: 'Processing highlights...' });
           let newCount = 0;
           for (const item of highlightData) {
             const highlightId = String(item.highlight.id);
             const existingState = db.getHighlightState(highlightId);
             if (!existingState) {
-              db.trackHighlight(highlightId, {
-                id: highlightId,
-                text: item.highlight.text,
-                highlighted_at: item.highlight.highlighted_at || null,
-                book_title: item.book.title || 'Unknown',
-                book_author: item.book.author || null
-              });
+              db.trackHighlight(highlightId);
               newCount++;
             }
           }

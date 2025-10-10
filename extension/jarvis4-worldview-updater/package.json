@@ -11,7 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:readwise.fetchAndShow"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {

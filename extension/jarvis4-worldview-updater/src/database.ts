@@ -11,14 +11,6 @@ interface HighlightState {
   last_updated: string;
 }
 
-export interface HighlightData {
-  id: string;
-  text: string;
-  highlighted_at: string | null;
-  book_title: string;
-  book_author: string | null;
-}
-
 export class HighlightDatabase {
   private db: Database | null = null;
   private sqlJs: any = null;
@@ -47,66 +39,97 @@ export class HighlightDatabase {
 
     this.db = new this.sqlJs.Database(data);
 
-    // Create schema
-    this.db!.run(`
-      CREATE TABLE IF NOT EXISTS highlight_states (
-        id TEXT PRIMARY KEY,
-        status TEXT NOT NULL CHECK(status IN ('NEW', 'INTEGRATED', 'ARCHIVED')),
-        snooze_history TEXT,
-        next_show_date TEXT,
-        first_seen TEXT NOT NULL,
-        last_updated TEXT NOT NULL
-      );
+    // Check current schema version and migrate if needed
+    const versionResult = this.db!.exec('PRAGMA user_version');
+    const currentVersion = (versionResult[0]?.values[0]?.[0] as number) || 0;
 
-      CREATE TABLE IF NOT EXISTS highlight_data (
-        id TEXT PRIMARY KEY,
-        text TEXT NOT NULL,
-        highlighted_at TEXT,
-        book_title TEXT NOT NULL,
-        book_author TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS metadata (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_status ON highlight_states(status);
-      CREATE INDEX IF NOT EXISTS idx_next_show_date ON highlight_states(next_show_date);
-      CREATE INDEX IF NOT EXISTS idx_highlighted_at ON highlight_data(highlighted_at);
-    `);
-
-    // Save initial database to disk
-    this.save();
-
-    // Migration: If we have highlight_states but no highlight_data, clear lastReadwiseFetch
-    // This handles the case where the old version created states without data
-    this.migrateIfNeeded();
+    if (currentVersion === 0) {
+      // Version 0: Old two-table schema or brand new database
+      this.migrateToV1();
+    }
 
     console.log('Database initialized:', this.dbPath);
   }
 
-  private migrateIfNeeded(): void {
+  private migrateToV1(): void {
     if (!this.db) {return;}
 
-    // Count states and data
-    const statesStmt = this.db.prepare('SELECT COUNT(*) as count FROM highlight_states');
-    statesStmt.step();
-    const statesCount = statesStmt.getAsObject().count as number;
-    statesStmt.free();
+    console.log('Migrating to schema version 1...');
 
-    const dataStmt = this.db.prepare('SELECT COUNT(*) as count FROM highlight_data');
-    dataStmt.step();
-    const dataCount = dataStmt.getAsObject().count as number;
-    dataStmt.free();
+    // Check if old schema exists
+    const checkStmt = this.db.prepare(`
+      SELECT name FROM sqlite_master
+      WHERE type='table' AND name='highlight_states'
+    `);
+    const hasOldSchema = checkStmt.step();
+    checkStmt.free();
 
-    // If we have states but no data, clear lastReadwiseFetch to trigger re-fetch
-    if (statesCount > 0 && dataCount === 0) {
-      console.log('Migration: Found highlight states without data, clearing lastReadwiseFetch to trigger re-fetch');
-      this.db.run('DELETE FROM metadata WHERE key = ?', ['lastReadwiseFetch']);
-      this.save();
+    if (hasOldSchema) {
+      console.log('Migrating from old two-table schema to new single-table schema...');
+
+      // Create new table
+      this.db.run(`
+        CREATE TABLE highlights (
+          id TEXT PRIMARY KEY,
+          status TEXT CHECK(status IN ('NEW', 'INTEGRATED', 'ARCHIVED')) DEFAULT 'NEW',
+          snooze_history TEXT,
+          next_show_date TEXT,
+          first_seen TEXT NOT NULL,
+          last_updated TEXT NOT NULL
+        )
+      `);
+
+      // Copy data from old table
+      this.db.run(`
+        INSERT INTO highlights (id, status, snooze_history, next_show_date, first_seen, last_updated)
+        SELECT id, status, snooze_history, next_show_date, first_seen, last_updated
+        FROM highlight_states
+      `);
+
+      // Drop old tables
+      this.db.run('DROP TABLE highlight_states');
+      this.db.run('DROP TABLE IF EXISTS highlight_data');
+
+      // Clear lastReadwiseFetch to trigger fresh fetch (since we dropped highlight_data)
+      const metadataExists = this.db.exec(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='metadata'"
+      )[0];
+
+      if (metadataExists) {
+        this.db.run('DELETE FROM metadata WHERE key = ?', ['lastReadwiseFetch']);
+      }
+    } else {
+      // Brand new database - create schema from scratch
+      this.db.run(`
+        CREATE TABLE highlights (
+          id TEXT PRIMARY KEY,
+          status TEXT CHECK(status IN ('NEW', 'INTEGRATED', 'ARCHIVED')) DEFAULT 'NEW',
+          snooze_history TEXT,
+          next_show_date TEXT,
+          first_seen TEXT NOT NULL,
+          last_updated TEXT NOT NULL
+        )
+      `);
     }
+
+    // Create metadata table (needed for both new and migrated databases)
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `);
+
+    // Create indexes
+    this.db.run('CREATE INDEX idx_status ON highlights(status)');
+    this.db.run('CREATE INDEX idx_next_show_date ON highlights(next_show_date)');
+
+    // Set schema version
+    this.db.run('PRAGMA user_version = 1');
+
+    this.save();
+    console.log('Migration to schema version 1 completed');
   }
 
   getVisibleHighlightIds(): string[] {
@@ -114,9 +137,10 @@ export class HighlightDatabase {
 
     const now = new Date().toISOString();
     const stmt = this.db.prepare(`
-      SELECT id FROM highlight_states
+      SELECT id FROM highlights
       WHERE status = 'NEW'
         AND (next_show_date IS NULL OR next_show_date <= ?)
+      ORDER BY first_seen DESC
     `);
 
     stmt.bind([now]);
@@ -133,7 +157,7 @@ export class HighlightDatabase {
     if (!this.db) {return null;}
 
     const stmt = this.db.prepare(`
-      SELECT * FROM highlight_states WHERE id = ?
+      SELECT * FROM highlights WHERE id = ?
     `);
     stmt.bind([id]);
 
@@ -147,26 +171,17 @@ export class HighlightDatabase {
     return null;
   }
 
-  trackHighlight(id: string, data?: HighlightData): void {
+  trackHighlight(id: string): void {
     if (!this.db) {return;}
 
     const now = new Date().toISOString();
 
-    // Insert state
+    // Insert highlight ID only
     this.db.run(`
-      INSERT OR IGNORE INTO highlight_states
+      INSERT OR IGNORE INTO highlights
       (id, status, snooze_history, next_show_date, first_seen, last_updated)
       VALUES (?, 'NEW', NULL, NULL, ?, ?)
     `, [id, now, now]);
-
-    // Insert data if provided
-    if (data) {
-      this.db.run(`
-        INSERT OR REPLACE INTO highlight_data
-        (id, text, highlighted_at, book_title, book_author)
-        VALUES (?, ?, ?, ?, ?)
-      `, [data.id, data.text, data.highlighted_at, data.book_title, data.book_author]);
-    }
 
     this.save();
   }
@@ -176,7 +191,7 @@ export class HighlightDatabase {
 
     const now = new Date().toISOString();
     this.db.run(`
-      UPDATE highlight_states
+      UPDATE highlights
       SET status = ?, last_updated = ?
       WHERE id = ?
     `, [status, now, id]);
@@ -200,7 +215,7 @@ export class HighlightDatabase {
     nextShowDate.setDate(nextShowDate.getDate() + (durationWeeks * 7));
 
     this.db.run(`
-      UPDATE highlight_states
+      UPDATE highlights
       SET snooze_history = ?, next_show_date = ?, last_updated = ?
       WHERE id = ?
     `, [JSON.stringify(snoozeHistory), nextShowDate.toISOString(), now, id]);
@@ -220,31 +235,6 @@ export class HighlightDatabase {
     }
   }
 
-  // Get most recent unprocessed highlights with full data
-  getRecentUnprocessedHighlights(limit: number = 30): HighlightData[] {
-    if (!this.db) {return [];}
-
-    const now = new Date().toISOString();
-    const stmt = this.db.prepare(`
-      SELECT d.id, d.text, d.highlighted_at, d.book_title, d.book_author
-      FROM highlight_data d
-      INNER JOIN highlight_states s ON d.id = s.id
-      WHERE s.status = 'NEW'
-        AND (s.next_show_date IS NULL OR s.next_show_date <= ?)
-      ORDER BY d.highlighted_at DESC
-      LIMIT ?
-    `);
-
-    stmt.bind([now, limit]);
-    const highlights: HighlightData[] = [];
-    while (stmt.step()) {
-      const row = stmt.getAsObject() as unknown as HighlightData;
-      highlights.push(row);
-    }
-    stmt.free();
-
-    return highlights;
-  }
 
   // Metadata operations
   getLastReadwiseFetch(): string | null {

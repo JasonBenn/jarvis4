@@ -37,7 +37,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const readwise = new ReadwiseClient(apiToken || '');
 
 		// Initialize webview manager
-		const webviewManager = new WebviewManager(context, db);
+		const webviewManager = new WebviewManager(context, db, readwise);
 
 		// Register commands
 		registerCommands(context, db, readwise, webviewManager);
@@ -46,6 +46,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push({
 			dispose: () => db.dispose()
 		});
+
+		// Auto-fetch and show on startup (if API token is configured)
+		if (apiToken) {
+			await vscode.commands.executeCommand('readwise.fetchAndShow');
+		}
 
 		console.log('Jarvis4 Worldview Updater extension activated successfully');
 	} catch (error) {

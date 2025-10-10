@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { HighlightDatabase } from './database';
+import { ReadwiseClient } from './readwiseClient';
 import type { ReadwiseHighlight, ReadwiseBookHighlights } from 'readwise-reader-api';
 
 interface HighlightWithMeta {
@@ -18,7 +19,8 @@ export class WebviewManager {
 
   constructor(
     private context: vscode.ExtensionContext,
-    private db: HighlightDatabase
+    private db: HighlightDatabase,
+    private readwise: ReadwiseClient
   ) {}
 
   setHighlights(highlights: Array<{ highlight: ReadwiseHighlight; book: ReadwiseBookHighlights }>): void {
@@ -82,21 +84,36 @@ export class WebviewManager {
   async refresh(): Promise<void> {
     if (!this.panel) {return;}
 
-    // Get recent unprocessed highlights from database (most recent 30)
-    const recentHighlights = this.db.getRecentUnprocessedHighlights(30);
-    const highlightsToShow: HighlightWithMeta[] = [];
+    // Get visible highlight IDs from DB (NEW, not snoozed, or snooze ended)
+    const visibleIds = this.db.getVisibleHighlightIds();
 
-    for (const data of recentHighlights) {
-      const snoozeCount = this.db.getSnoozeCount(data.id);
-      highlightsToShow.push({
-        id: data.id,
-        text: data.text,
-        source_title: data.book_title,
-        source_author: data.book_author || undefined,
-        highlighted_at: data.highlighted_at || undefined,
-        snooze_count: snoozeCount
-      });
+    // If we have highlights cached from recent fetch, use those
+    // Otherwise, fetch all from API
+    if (this.highlights.length === 0) {
+      try {
+        this.highlights = await this.readwise.fetchAllHighlightsWithBooks();
+      } catch (error) {
+        console.error('Failed to fetch highlights from Readwise:', error);
+        vscode.window.showErrorMessage(`Failed to fetch highlights: ${error}`);
+        return;
+      }
     }
+
+    // Filter to only visible IDs and limit to 30
+    const highlightsToShow: HighlightWithMeta[] = this.highlights
+      .filter(item => visibleIds.includes(String(item.highlight.id)))
+      .slice(0, 30)
+      .map(item => {
+        const snoozeCount = this.db.getSnoozeCount(String(item.highlight.id));
+        return {
+          id: String(item.highlight.id),
+          text: item.highlight.text,
+          source_title: item.book.title || 'Unknown',
+          source_author: item.book.author || undefined,
+          highlighted_at: item.highlight.highlighted_at || undefined,
+          snooze_count: snoozeCount
+        };
+      });
 
     this.panel.webview.postMessage({
       type: 'updateHighlights',
@@ -114,16 +131,15 @@ export class WebviewManager {
     const promptDoc = await vscode.workspace.openTextDocument(promptPath);
     const basePrompt = promptDoc.getText();
 
-    // Get highlights from database and format them
-    const recentHighlights = this.db.getRecentUnprocessedHighlights(100); // Get more to ensure we have all selected IDs
+    // Get highlights from cached API data
     const highlightTexts = highlightIds
-      .map(id => recentHighlights.find(h => h.id === id))
-      .filter(data => data !== undefined)
-      .map(data => {
-        const source = data!.book_author
-          ? `${data!.book_title} by ${data!.book_author}`
-          : data!.book_title;
-        return `<highlight>\n${data!.text}\n— ${source}\n</highlight>`;
+      .map(id => this.highlights.find(item => String(item.highlight.id) === id))
+      .filter(item => item !== undefined)
+      .map(item => {
+        const source = item!.book.author
+          ? `${item!.book.title} by ${item!.book.author}`
+          : item!.book.title;
+        return `<highlight>\n${item!.highlight.text}\n— ${source}\n</highlight>`;
       })
       .join('\n\n');
 
