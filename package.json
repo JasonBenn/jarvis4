@@ -9,6 +9,7 @@
     "db:reset": "prisma migrate reset --schema=db/schema.prisma",
     "db:studio": "prisma studio --schema=db/schema.prisma",
     "ext:db": "sqlite3 \"$HOME/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db\"",
+    "ext:db:migrate": "pgrep -x Cursor && echo '❌ Error: Cursor is running. Please close Cursor before running migrations.' && exit 1 || pnpm run ext:db < extension/jarvis4-worldview-updater/migrations/v1-single-table.sql && echo '✅ Migration complete'",
     "ext:db:metadata": "pnpm run ext:db \"SELECT * FROM metadata;\"",
     "ext:db:highlights": "pnpm run ext:db \"SELECT COUNT(*) FROM highlights;\"",
     "install-alias": "./src/install-aliases.sh",

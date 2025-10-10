@@ -39,98 +39,9 @@ export class HighlightDatabase {
 
     this.db = new this.sqlJs.Database(data);
 
-    // Check current schema version and migrate if needed
-    const versionResult = this.db!.exec('PRAGMA user_version');
-    const currentVersion = (versionResult[0]?.values[0]?.[0] as number) || 0;
-
-    if (currentVersion === 0) {
-      // Version 0: Old two-table schema or brand new database
-      this.migrateToV1();
-    }
-
     console.log('Database initialized:', this.dbPath);
   }
 
-  private migrateToV1(): void {
-    if (!this.db) {return;}
-
-    console.log('Migrating to schema version 1...');
-
-    // Check if old schema exists
-    const checkStmt = this.db.prepare(`
-      SELECT name FROM sqlite_master
-      WHERE type='table' AND name='highlight_states'
-    `);
-    const hasOldSchema = checkStmt.step();
-    checkStmt.free();
-
-    if (hasOldSchema) {
-      console.log('Migrating from old two-table schema to new single-table schema...');
-
-      // Create new table
-      this.db.run(`
-        CREATE TABLE highlights (
-          id TEXT PRIMARY KEY,
-          status TEXT CHECK(status IN ('NEW', 'INTEGRATED', 'ARCHIVED')) DEFAULT 'NEW',
-          snooze_history TEXT,
-          next_show_date TEXT,
-          first_seen TEXT NOT NULL,
-          last_updated TEXT NOT NULL
-        )
-      `);
-
-      // Copy data from old table
-      this.db.run(`
-        INSERT INTO highlights (id, status, snooze_history, next_show_date, first_seen, last_updated)
-        SELECT id, status, snooze_history, next_show_date, first_seen, last_updated
-        FROM highlight_states
-      `);
-
-      // Drop old tables
-      this.db.run('DROP TABLE highlight_states');
-      this.db.run('DROP TABLE IF EXISTS highlight_data');
-
-      // Clear lastReadwiseFetch to trigger fresh fetch (since we dropped highlight_data)
-      const metadataExists = this.db.exec(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='metadata'"
-      )[0];
-
-      if (metadataExists) {
-        this.db.run('DELETE FROM metadata WHERE key = ?', ['lastReadwiseFetch']);
-      }
-    } else {
-      // Brand new database - create schema from scratch
-      this.db.run(`
-        CREATE TABLE highlights (
-          id TEXT PRIMARY KEY,
-          status TEXT CHECK(status IN ('NEW', 'INTEGRATED', 'ARCHIVED')) DEFAULT 'NEW',
-          snooze_history TEXT,
-          next_show_date TEXT,
-          first_seen TEXT NOT NULL,
-          last_updated TEXT NOT NULL
-        )
-      `);
-    }
-
-    // Create metadata table (needed for both new and migrated databases)
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS metadata (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )
-    `);
-
-    // Create indexes
-    this.db.run('CREATE INDEX idx_status ON highlights(status)');
-    this.db.run('CREATE INDEX idx_next_show_date ON highlights(next_show_date)');
-
-    // Set schema version
-    this.db.run('PRAGMA user_version = 1');
-
-    this.save();
-    console.log('Migration to schema version 1 completed');
-  }
 
   getVisibleHighlightIds(): string[] {
     if (!this.db) {return [];}
