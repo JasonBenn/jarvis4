@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "upload": "tsx src/upload-to-readwise.ts",
+    "upload": "tsx scripts/upload-to-readwise.ts",
     "recent-changes": "node scripts/extract-log-entries.js",
     "db:init": "prisma generate --schema=db/schema.prisma && prisma db push --schema=db/schema.prisma",
     "db:migrate": "prisma migrate dev --schema=db/schema.prisma",
@@ -13,8 +13,8 @@
     "ext:db:migrate": "pgrep -x Cursor && echo '❌ Error: Cursor is running. Please close Cursor before running migrations.' && exit 1 || pnpm run ext:db < extension/jarvis4-worldview-updater/migrations/v1-single-table.sql && echo '✅ Migration complete'",
     "ext:db:metadata": "pnpm run ext:db \"SELECT * FROM metadata;\"",
     "ext:db:highlights": "pnpm run ext:db \"SELECT COUNT(*) FROM highlights;\"",
-    "install:alias": "./src/install-aliases.sh",
-    "install:raycast": "ln -sf \"$HOME/code/jarvis4/src/worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
+    "install:alias": "./scripts/install-aliases.sh",
+    "install:raycast": "ln -sf \"$HOME/code/jarvis4/scripts/worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
     "install:notes-hook": "ln -sf \"$HOME/code/jarvis4/scripts/extract-log-entries.js\" \"$HOME/notes/Neighborhood Notes/.git/hooks/post-commit\" && echo '✅ Git hook symlinked!'"
   },
   "devDependencies": {
