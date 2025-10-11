@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { marked } from 'marked';
 import { createHash } from 'crypto';
 import OpenAI from 'openai';
-import { PrismaClient } from '@prisma/client';
+import { generatedImages } from '../src/generated-images-db.js';
 import 'dotenv/config';
 
 const READWISE_TOKEN = process.env.READWISE_TOKEN;
@@ -22,7 +22,6 @@ if (!OPENAI_API_KEY) {
 }
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-const prisma = new PrismaClient();
 
 function extractMostRecentEntry(markdown: string): string | null {
   // Split by H3 headers (###)
@@ -80,18 +79,16 @@ async function uploadToReadwise() {
 
     // Check if we've already generated an image for this entry
     let imageUrl: string;
-    const existingImage = await prisma.generatedImage.findUnique({
-      where: { entryHash },
-    });
+    const existingImage = generatedImages.findByEntryHash(entryHash);
 
     if (existingImage) {
       console.log('📷 Using existing thumbnail');
-      imageUrl = existingImage.imageUrl;
+      imageUrl = existingImage.image_url;
 
       // Delete old document if it exists
-      if (existingImage.documentId) {
-        console.log(`🗑️  Deleting old document ${existingImage.documentId}...`);
-        await fetch(`https://readwise.io/api/v3/delete/${existingImage.documentId}`, {
+      if (existingImage.document_id) {
+        console.log(`🗑️  Deleting old document ${existingImage.document_id}...`);
+        await fetch(`https://readwise.io/api/v3/delete/${existingImage.document_id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Token ${READWISE_TOKEN}`,
@@ -104,12 +101,7 @@ async function uploadToReadwise() {
       imageUrl = await generateThumbnail(recentEntry);
 
       // Save to database
-      await prisma.generatedImage.create({
-        data: {
-          entryHash,
-          imageUrl,
-        },
-      });
+      generatedImages.create(entryHash, imageUrl);
       console.log('💾 Saved thumbnail to database');
     }
 
@@ -144,16 +136,14 @@ async function uploadToReadwise() {
     const result = await response.json();
 
     // Update database with new document ID
-    await prisma.generatedImage.update({
-      where: { entryHash },
-      data: { documentId: result.id },
-    });
+    generatedImages.updateDocumentId(entryHash, result.id);
 
     console.log('✅ Successfully uploaded to Readwise Reader');
     console.log('Document ID:', result.id);
     console.log('URL:', result.url);
-  } finally {
-    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
   }
 }
 
