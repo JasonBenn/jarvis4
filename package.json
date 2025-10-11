@@ -3,30 +3,26 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "upload": "tsx scripts/upload-to-readwise.ts",
-    "recent-changes": "node scripts/extract-log-entries.js",
-    "db:init": "prisma generate --schema=db/schema.prisma && prisma db push --schema=db/schema.prisma",
-    "db:migrate": "prisma migrate dev --schema=db/schema.prisma",
-    "db:reset": "prisma migrate reset --schema=db/schema.prisma",
-    "db:studio": "prisma studio --schema=db/schema.prisma",
-    "ext:db": "sqlite3 \"$HOME/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db\"",
-    "ext:db:migrate": "pgrep -x Cursor && echo '❌ Error: Cursor is running. Please close Cursor before running migrations.' && exit 1 || pnpm run ext:db < extension/jarvis4-worldview-updater/migrations/v1-single-table.sql && echo '✅ Migration complete'",
-    "ext:db:metadata": "pnpm run ext:db \"SELECT * FROM metadata;\"",
-    "ext:db:highlights": "pnpm run ext:db \"SELECT COUNT(*) FROM highlights;\"",
-    "install:alias": "./scripts/install-aliases.sh",
-    "install:raycast": "ln -sf \"$HOME/code/jarvis4/scripts/worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
-    "install:notes-hook": "ln -sf \"$HOME/code/jarvis4/scripts/extract-log-entries.js\" \"$HOME/notes/Neighborhood Notes/.git/hooks/post-commit\" && echo '✅ Git hook symlinked!'"
+    "db": "sqlite3 \"$HOME/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db\"",
+    "db:migrate": "pgrep -x Cursor && echo '❌ Error: Cursor is running. Please close Cursor before running migrations.' && exit 1 || pnpm run db < extension/jarvis4-worldview-updater/migrations/v1-single-table.sql && echo '✅ Migration complete'",
+    "db:metadata": "pnpm run db \"SELECT * FROM metadata;\"",
+    "db:highlights": "pnpm run db \"SELECT COUNT(*) FROM highlights;\"",
+    "upload:run": "tsx scripts/upload-to-readwise.ts",
+    "open-worldview:run": "bash scripts/open-worldview.sh",
+    "open-worldview:link": "ln -sf \"$HOME/code/jarvis4/scripts/open-worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
+    "recent-changes:run": "node scripts/recent-changes.js",
+    "recent-changes:link": "ln -sf \"$HOME/code/jarvis4/scripts/recent-changes.js\" \"$HOME/notes/Neighborhood Notes/.git/hooks/pre-commit\" && echo '✅ Git hook symlinked!'"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/sql.js": "^1.4.9",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.3",
     "dotenv": "^16.4.7",
     "marked": "^15.0.4",
     "openai": "^6.1.0",
-    "prisma": "^6.16.3"
+    "sql.js": "^1.13.0"
   }
 }
