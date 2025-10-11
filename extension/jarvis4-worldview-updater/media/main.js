@@ -77,16 +77,43 @@
         break;
       case ' ':
         e.preventDefault();
-        const id = highlights[selectedIndex].id;
-        // Space toggles both expand AND check together
-        if (checkedIds.has(id)) {
-          // Collapse and uncheck
-          checkedIds.delete(id);
-          expandedIds.delete(id);
+        const currentHighlight = highlights[selectedIndex];
+        const currentSource = currentHighlight.source_title;
+        const highlightsFromSource = highlights.filter(h => h.source_title === currentSource);
+        if (e.shiftKey) {
+          // Shift+Space toggles individual highlight
+          const id = highlights[selectedIndex].id;
+          console.log('Toggling individual highlight:', id);
+          if (checkedIds.has(id)) {
+            checkedIds.delete(id);
+            expandedIds.delete(id);
+          } else {
+            checkedIds.add(id);
+            expandedIds.add(id);
+          }
         } else {
-          // Expand and check
-          checkedIds.add(id);
-          expandedIds.add(id);
+          // Space toggles ALL highlights from the same source
+          const currentHighlight = highlights[selectedIndex];
+          const currentSource = currentHighlight.source_title;
+          const highlightsFromSource = highlights.filter(h => h.source_title === currentSource);
+          console.log('Toggling all highlights from source:', currentSource, 'count:', highlightsFromSource.length);
+
+          // Check if all highlights from this source are already checked
+          const allChecked = highlightsFromSource.every(h => checkedIds.has(h.id));
+
+          if (allChecked) {
+            // Uncheck and collapse all from this source
+            highlightsFromSource.forEach(h => {
+              checkedIds.delete(h.id);
+              expandedIds.delete(h.id);
+            });
+          } else {
+            // Check and expand all from this source
+            highlightsFromSource.forEach(h => {
+              checkedIds.add(h.id);
+              expandedIds.add(h.id);
+            });
+          }
         }
         render();
         break;
@@ -107,17 +134,31 @@
       case 's':
       case 'S':
         e.preventDefault();
+        // Snooze all checked highlights (or just focused one if none checked)
+        const idsToSnooze = checkedIds.size > 0
+          ? Array.from(checkedIds)
+          : [highlights[selectedIndex].id];
+
         vscode.postMessage({
           type: 'snooze',
-          highlightId: highlights[selectedIndex].id
+          highlightIds: idsToSnooze
         });
+        // Clear checked after snoozing
+        checkedIds.clear();
         break;
       case 'Backspace':
         e.preventDefault();
+        // Archive all checked highlights (or just focused one if none checked)
+        const idsToArchive = checkedIds.size > 0
+          ? Array.from(checkedIds)
+          : [highlights[selectedIndex].id];
+
         vscode.postMessage({
           type: 'archive',
-          highlightId: highlights[selectedIndex].id
+          highlightIds: idsToArchive
         });
+        // Clear checked after archiving
+        checkedIds.clear();
         break;
     }
   });

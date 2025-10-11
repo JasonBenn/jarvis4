@@ -57,10 +57,10 @@ export class WebviewManager {
             await this.handleIntegrate(message.highlightIds || [message.highlightId]);
             break;
           case 'snooze':
-            await this.handleSnooze(message.highlightId);
+            await this.handleSnooze(message.highlightIds || [message.highlightId]);
             break;
           case 'archive':
-            await this.handleArchive(message.highlightId);
+            await this.handleArchive(message.highlightIds || [message.highlightId]);
             break;
           case 'snoozeAll':
             await this.handleSnoozeAll();
@@ -157,16 +157,20 @@ export class WebviewManager {
     await this.refresh();
   }
 
-  private async handleSnooze(highlightId: string): Promise<void> {
+  private async handleSnooze(highlightIds: string[]): Promise<void> {
     const config = vscode.workspace.getConfiguration('readwise');
     const durationWeeks = config.get<number>('snoozeDurationWeeks') || 4;
 
-    this.db.snoozeHighlight(highlightId, durationWeeks);
+    for (const id of highlightIds) {
+      this.db.snoozeHighlight(id, durationWeeks);
+    }
     await this.refresh();
   }
 
-  private async handleArchive(highlightId: string): Promise<void> {
-    this.db.updateStatus(highlightId, 'ARCHIVED');
+  private async handleArchive(highlightIds: string[]): Promise<void> {
+    for (const id of highlightIds) {
+      this.db.updateStatus(id, 'ARCHIVED');
+    }
     await this.refresh();
   }
 
