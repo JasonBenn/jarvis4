@@ -4,6 +4,11 @@
   "description": "Integrate Readwise highlights into Cursor Compose workflow",
   "version": "0.1.0",
   "publisher": "jasonbenn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonbenn/jarvis4-worldview-updater"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
