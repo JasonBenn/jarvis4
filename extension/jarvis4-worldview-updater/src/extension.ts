@@ -47,10 +47,6 @@ export async function activate(context: vscode.ExtensionContext) {
 			dispose: () => db.dispose()
 		});
 
-		// Auto-fetch and show on startup (if API token is configured)
-		if (apiToken) {
-			await vscode.commands.executeCommand('readwise.fetchAndShow');
-		}
 
 		console.log('Jarvis4 Worldview Updater extension activated successfully');
 	} catch (error) {
