@@ -6,14 +6,16 @@
  * This script fetches ALL highlights from Readwise (using pagination automatically)
  * and upserts them into the database. It dedupes based on highlight ID.
  *
- * Usage: tsx scripts/sync-all-highlights.ts
+ * Usage: pnpm sync:all
  */
 
-import { Readwise } from 'readwise-reader-api';
-import type { ReadwiseBookHighlights } from 'readwise-reader-api';
+import 'dotenv/config';
+import ReadwiseAPI from 'readwise-reader-api';
 import { prisma } from '../src/db/client.js';
 import * as bookService from '../src/services/bookService.js';
 import * as highlightService from '../src/services/highlightService.js';
+
+const { Readwise } = ReadwiseAPI as any;
 
 const READWISE_TOKEN = process.env.READWISE_TOKEN;
 

@@ -22,7 +22,7 @@ export async function upsertBook(bookData: BookData) {
     where: { id: bookData.user_book_id },
     update: {
       title: bookData.title,
-      author: bookData.author,
+      author: bookData.author || '',
       readableTitle: bookData.readable_title,
       source: bookData.source,
       coverImageUrl: bookData.cover_image_url,
@@ -38,7 +38,7 @@ export async function upsertBook(bookData: BookData) {
     create: {
       id: bookData.user_book_id,
       title: bookData.title,
-      author: bookData.author,
+      author: bookData.author || '',
       readableTitle: bookData.readable_title,
       source: bookData.source,
       coverImageUrl: bookData.cover_image_url,

@@ -28,7 +28,7 @@ body {
 }
 
 #highlights-list {
-  padding: 0 0 40px 0;
+  padding: 0;
 }
 
 #right-pane {
@@ -54,9 +54,6 @@ body {
   font-weight: 600;
   font-size: 12px;
   color: var(--vscode-textLink-foreground);
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 /* Compact highlight list item */
@@ -146,33 +143,20 @@ body {
   word-wrap: break-word;
 }
 
-.actions {
+.keyboard-shortcuts-footer {
   display: flex;
-  gap: 8px;
-  padding: 12px;
+  gap: 12px;
+  padding: 8px 12px;
   border-top: 1px solid var(--vscode-panel-border);
-  background-color: var(--vscode-editor-background);
+  background-color: var(--vscode-sideBar-background);
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.actions button {
-  flex: 1;
-  padding: 8px 16px;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: var(--vscode-font-family);
-  transition: background-color 0.15s ease;
-}
-
-.actions button:hover {
-  background-color: var(--vscode-button-hoverBackground);
-}
-
-.actions button:active {
-  transform: translateY(1px);
+.keyboard-shortcuts-footer span {
+  white-space: nowrap;
 }
 
 /* End of list indicator */
@@ -182,17 +166,6 @@ body {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
-}
-
-/* Keyboard shortcuts hint */
-.keyboard-hints {
-  padding: 8px 12px;
-  border-top: 1px solid var(--vscode-panel-border);
-  font-size: 10px;
-  color: var(--vscode-descriptionForeground);
-  background-color: var(--vscode-sideBar-background);
-  position: sticky;
-  bottom: 0;
 }
 
 /* Loading indicator */

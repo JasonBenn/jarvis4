@@ -156,9 +156,8 @@ Maintaining already-written notes in an outline is comparatively easy: just look
 Furthermore, to start a writing project with a blank outline, we need to have a topic and some angle in mind. We can [[Use notes to avoid preconceived conclusions]].
 
 Also, quotes should use > for multiline and " for one-line.
-- Quotes should be cited. Use the `[^1]` syntax. At the end: `[^1]: Author Name, [Page Title](URL, if known), Year Published`.
-- IMPORTANT: do not make up URLs.
-- When provided with Readwise URLs in the format `wiseread:///read/{book_id}`, use those URLs directly in citations - they are valid deep links to open the source in Readwise.
+- Quotes should be cited. Use the `[^1]` syntax. At the end: `[^1]: Author Name, [Page Title](URL), Year Published`.
+- IMPORTANT: do not make up URLs. When highlight URLs are provided, you MUST extract and use the url exactly as provided in your citations.
 
 ## Document Format
 
@@ -196,8 +195,8 @@ You can add one or both types depending on what emerged from the work.
 
 <good-example>
 ### [[2025-10-10]] Inflationary vs deflationary?
-- **Read**: [AI #126: Go Fund Yourself](wiseread:///read/918503033) by TheZvi, [Meta's AI Abundance](wiseread:///read/826974402) by Ben Thompson.
-- **Updated**: [AI creates deflationary abundance and inflationary capital demand simultaneously](link). The tension: AI makes goods/services cheaper through productivity gains, but requires massive capital investment in compute infrastructure, potentially keeping real interest rates high.
+- **Read**: [AI #126: Go Fund Yourself]({url}) by TheZvi, [Meta's AI Abundance]({url}) by Ben Thompson.
+- **Updated**: [[AI creates deflationary abundance and inflationary capital demand simultaneously]]. The tension: AI makes goods/services cheaper through productivity gains, but requires massive capital investment in compute infrastructure, potentially keeping real interest rates high.
 - *[[2025-10-10]]*
 </good-example>
 
@@ -207,8 +206,6 @@ What historical precedents exist for technologies that were simultaneously defla
 - *Related resources*: Industrial Revolution literature, railroad boom analyses, electricity infrastructure studies
 - *[[2025-10-10]]*
 </good-example>
-
-**Note on Readwise URLs**: The URLs in the format `wiseread:///read/{book_id}` are provided automatically and link directly to the source document in Readwise. Use these URLs exactly as provided - they are valid deep links that allow you to return to the original source material.
 
 <bad-example>
 ### Updated note

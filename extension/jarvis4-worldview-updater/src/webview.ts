@@ -8,11 +8,15 @@ import type {
   ReadwiseBookHighlights,
 } from "readwise-reader-api";
 
-const LOG_FILE = '/tmp/readwise-search.log';
+const LOG_FILE = "/tmp/readwise-search.log";
 
 function log(...args: any[]) {
   const timestamp = new Date().toISOString();
-  const message = `[${timestamp}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ')}\n`;
+  const message = `[${timestamp}] ${args
+    .map((a) =>
+      typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)
+    )
+    .join(" ")}\n`;
   fs.appendFileSync(LOG_FILE, message);
   console.log(...args);
 }
@@ -102,7 +106,9 @@ export class WebviewManager {
           case "openUrl":
             // Copy URL to clipboard for inspection
             await vscode.env.clipboard.writeText(message.url);
-            vscode.window.showInformationMessage(`Copied to clipboard: ${message.url}`);
+            vscode.window.showInformationMessage(
+              `Copied to clipboard: ${message.url}`
+            );
             // Also open the URL
             await vscode.env.openExternal(vscode.Uri.parse(message.url));
             break;
@@ -185,28 +191,21 @@ export class WebviewManager {
     const highlightTexts = await Promise.all(
       highlightIds.map(async (id) => {
         const highlight = await this.db.getHighlightState(id);
-        if (!highlight || !highlight.book) return null;
+        if (!highlight || !highlight.book) {
+          return null;
+        }
 
         const source = highlight.book.author
           ? `${highlight.book.title} by ${highlight.book.author}`
           : highlight.book.title;
-        const readwiseUrl = `wiseread:///read/${highlight.bookId}`;
-        return `<highlight>\n${highlight.text}\n— ${source}\n— ${readwiseUrl}\n</highlight>`;
+        const url = highlight.url;
+        return `<highlight>\n${highlight.text}\n— ${source}\n— ${url}\n</highlight>`;
       })
     );
 
-    const validTexts = highlightTexts.filter(t => t !== null).join("\n\n");
+    const validTexts = highlightTexts.filter((t) => t !== null).join("\n\n");
 
-    // Update status in DB for all
-    for (const id of highlightIds) {
-      await this.db.updateStatus(id, "INTEGRATED");
-    }
-
-    // Use /worldview command instead of pasting full prompt
     await this.useWorldviewCommand(validTexts);
-
-    // Refresh view
-    await this.refresh();
   }
 
   private async handleSnooze(highlightIds: string[]): Promise<void> {
@@ -296,35 +295,33 @@ export class WebviewManager {
     }
 
     try {
-      log('handleSearch called with query:', query);
+      log("handleSearch called with query:", query);
       // Use Readwise MCP vector search API
       const results = await this.readwise.searchHighlights(query);
 
-      log('Search results sample:', results.slice(0, 2));
+      log("Search results sample:", results.slice(0, 2));
 
       const matchingHighlights: HighlightWithMeta[] = await Promise.all(
-        results
-          .slice(0, 30)
-          .map(async (result) => {
-            const highlightId = String(result.id);
-            const snoozeCount = await this.db.getSnoozeCount(highlightId);
+        results.slice(0, 30).map(async (result) => {
+          const highlightId = String(result.id);
+          const snoozeCount = await this.db.getSnoozeCount(highlightId);
 
-            // Get the full highlight from DB to get the book ID and unique URL
-            const highlightState = await this.db.getHighlightState(highlightId);
-            const bookId = highlightState?.bookId || 0;
-            const uniqueUrl = highlightState?.book?.uniqueUrl || undefined;
+          // Get the full highlight from DB to get the book ID and unique URL
+          const highlightState = await this.db.getHighlightState(highlightId);
+          const bookId = highlightState?.bookId || 0;
+          const uniqueUrl = highlightState?.book?.uniqueUrl || undefined;
 
-            return {
-              id: highlightId,
-              text: result.attributes.highlight_plaintext,
-              source_title: result.attributes.document_title || "Unknown",
-              source_author: result.attributes.document_author,
-              highlighted_at: undefined, // Not provided in MCP response
-              snooze_count: snoozeCount,
-              book_id: bookId,
-              unique_url: uniqueUrl,
-            };
-          })
+          return {
+            id: highlightId,
+            text: result.attributes.highlight_plaintext,
+            source_title: result.attributes.document_title || "Unknown",
+            source_author: result.attributes.document_author,
+            highlighted_at: undefined, // Not provided in MCP response
+            snooze_count: snoozeCount,
+            book_id: bookId,
+            unique_url: uniqueUrl,
+          };
+        })
       );
 
       this.panel.webview.postMessage({
@@ -438,9 +435,16 @@ export class WebviewManager {
             <div id="details-container"></div>
           </div>
         </div>
-        <div class="actions">
-          <button id="snooze-all">Snooze All</button>
-          <button id="archive-all">Archive All</button>
+        <div class="keyboard-shortcuts-footer">
+          <span>↑↓: Navigate</span>
+          <span>Space: Check</span>
+          <span>Shift+Space: Check Group</span>
+          <span>Enter: Integrate</span>
+          <span>S: Snooze</span>
+          <span>Backspace: Archive</span>
+          <span>O: Open</span>
+          <span>/: Search</span>
+          <span>E: Similar</span>
         </div>
       </div>
       <script src="${scriptUri}"></script>

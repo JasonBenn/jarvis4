@@ -171,8 +171,6 @@
       listHTML += `<div class="end-of-list">— End of highlights —</div>`;
     }
 
-    listHTML += `<div class="keyboard-hints">↑↓: Navigate • Space: Check • Enter: Integrate • S: Snooze • Backspace: Archive • O: Open • /: Search • E: Similar</div>`;
-
     listContainer.innerHTML = listHTML;
 
     // Scroll focused into view in left pane
@@ -309,12 +307,14 @@
         });
         break;
       case 'Escape':
+        e.preventDefault();
         if (isSearchMode) {
-          e.preventDefault();
           isSearchMode = false;
           searchResults = [];
-          render();
         }
+        // Clear all checked highlights
+        checkedIds.clear();
+        render();
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -410,8 +410,6 @@
             type: 'integrate',
             highlightIds: idsToIntegrate
           });
-          // Clear checked after integrating
-          checkedIds.clear();
         }
         break;
       case 's':
@@ -423,6 +421,28 @@
           : (selectedId ? [selectedId] : []);
 
         if (idsToSnooze.length > 0) {
+          // Find the next highlight to select after snoozing
+          const currentIndexSnooze = getSelectedIndex(displayHighlights);
+          let nextIndexSnooze = currentIndexSnooze;
+
+          // Find the next highlight that isn't being snoozed
+          while (nextIndexSnooze < displayHighlights.length && idsToSnooze.includes(displayHighlights[nextIndexSnooze].id)) {
+            nextIndexSnooze++;
+          }
+
+          // If we've reached the end, try going backwards
+          if (nextIndexSnooze >= displayHighlights.length) {
+            nextIndexSnooze = currentIndexSnooze - 1;
+            while (nextIndexSnooze >= 0 && idsToSnooze.includes(displayHighlights[nextIndexSnooze].id)) {
+              nextIndexSnooze--;
+            }
+          }
+
+          // Update selection to next valid highlight (or null if none)
+          selectedId = nextIndexSnooze >= 0 && nextIndexSnooze < displayHighlights.length
+            ? displayHighlights[nextIndexSnooze].id
+            : null;
+
           vscode.postMessage({
             type: 'snooze',
             highlightIds: idsToSnooze
@@ -439,6 +459,28 @@
           : (selectedId ? [selectedId] : []);
 
         if (idsToArchive.length > 0) {
+          // Find the next highlight to select after archiving
+          const currentIndex = getSelectedIndex(displayHighlights);
+          let nextIndex = currentIndex;
+
+          // Find the next highlight that isn't being archived
+          while (nextIndex < displayHighlights.length && idsToArchive.includes(displayHighlights[nextIndex].id)) {
+            nextIndex++;
+          }
+
+          // If we've reached the end, try going backwards
+          if (nextIndex >= displayHighlights.length) {
+            nextIndex = currentIndex - 1;
+            while (nextIndex >= 0 && idsToArchive.includes(displayHighlights[nextIndex].id)) {
+              nextIndex--;
+            }
+          }
+
+          // Update selection to next valid highlight (or null if none)
+          selectedId = nextIndex >= 0 && nextIndex < displayHighlights.length
+            ? displayHighlights[nextIndex].id
+            : null;
+
           vscode.postMessage({
             type: 'archive',
             highlightIds: idsToArchive
@@ -483,12 +525,4 @@
     }
   });
 
-  // Button handlers
-  document.getElementById('snooze-all').addEventListener('click', () => {
-    vscode.postMessage({ type: 'snoozeAll' });
-  });
-
-  document.getElementById('archive-all').addEventListener('click', () => {
-    vscode.postMessage({ type: 'archiveAll' });
-  });
 })();

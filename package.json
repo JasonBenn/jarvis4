@@ -27,7 +27,10 @@
     "open-worldview:link": "ln -sf \"$HOME/code/jarvis4/scripts/open-worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
     "recent-changes": "node scripts/recent-changes.js",
     "upload": "tsx scripts/upload-to-readwise.ts",
-    "precommit:link": "chmod +x \"$HOME/code/jarvis4/scripts/pre-commit-hook.sh\" && ln -sf \"$HOME/code/jarvis4/scripts/pre-commit-hook.sh\" \"$HOME/notes/Neighborhood Notes/.git/hooks/pre-commit\" && echo '✅ Git hook symlinked!'"
+    "sync:all": "tsx scripts/sync-all-highlights.ts",
+    "update:integrated": "tsx scripts/update_integrated.ts",
+    "precommit:link": "chmod +x \"$HOME/code/jarvis4/scripts/pre-commit-hook.sh\" && ln -sf \"$HOME/code/jarvis4/scripts/pre-commit-hook.sh\" \"$HOME/notes/Neighborhood Notes/.git/hooks/pre-commit\" && echo '✅ Git hook symlinked!'",
+    "postcommit:link": "chmod +x \"$HOME/.logseq/git/_Users_jasonbenn_notes/.git/hooks/post-commit\" && echo '✅ Post-commit hook configured!'"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -41,6 +44,7 @@
     "fastify": "^5.6.1",
     "marked": "^15.0.4",
     "openai": "^6.1.0",
-    "prisma": "^6.17.1"
+    "prisma": "^6.17.1",
+    "readwise-reader-api": "^0.5.2"
   }
 }
