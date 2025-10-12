@@ -20,7 +20,7 @@ export interface HighlightData {
   book_id: number;
 }
 
-export async function getVisibleHighlights() {
+export async function getVisibleHighlights(limit?: number, offset?: number) {
   const now = new Date();
   return prisma.highlight.findMany({
     where: {
@@ -32,6 +32,11 @@ export async function getVisibleHighlights() {
     },
     include: {
       book: true,
+    },
+    take: limit,
+    skip: offset,
+    orderBy: {
+      highlightedAt: 'desc',
     },
   });
 }

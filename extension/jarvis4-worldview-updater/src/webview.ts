@@ -34,6 +34,8 @@ export class WebviewManager {
     highlight: ReadwiseHighlight;
     book: ReadwiseBookHighlights;
   }> = [];
+  private currentOffset: number = 0;
+  private currentLimit: number = 30;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -110,6 +112,9 @@ export class WebviewManager {
           case "searchSimilar":
             await this.handleSearch(message.query);
             break;
+          case "loadMore":
+            await this.handleLoadMore();
+            break;
         }
       },
       undefined,
@@ -128,13 +133,18 @@ export class WebviewManager {
       return;
     }
 
-    // Get visible highlights WITH book data from DB
-    const visibleHighlights = await this.db.getVisibleHighlightIds();
+    // Reset pagination on refresh
+    this.currentOffset = 0;
 
-    // Transform to display format and limit to 30
-    const highlightsToShow: HighlightWithMeta[] = visibleHighlights
-      .slice(0, 30)
-      .map((highlight: any) => {
+    // Get visible highlights WITH book data from DB
+    const visibleHighlights = await this.db.getVisibleHighlightIds(
+      this.currentLimit,
+      this.currentOffset
+    );
+
+    // Transform to display format
+    const highlightsToShow: HighlightWithMeta[] = visibleHighlights.map(
+      (highlight: any) => {
         const snoozeCount = highlight.snoozeHistory
           ? JSON.parse(highlight.snoozeHistory).length
           : 0;
@@ -149,7 +159,8 @@ export class WebviewManager {
           book_id: highlight.bookId,
           unique_url: highlight.book?.uniqueUrl || undefined,
         };
-      }) as HighlightWithMeta[];
+      }
+    ) as HighlightWithMeta[];
 
     this.panel.webview.postMessage({
       type: "updateHighlights",
@@ -232,6 +243,51 @@ export class WebviewManager {
       await this.db.updateStatus(id, "ARCHIVED");
     }
     await this.refresh();
+  }
+
+  private async handleLoadMore(): Promise<void> {
+    if (!this.panel) {
+      return;
+    }
+
+    // Increment offset to get next batch
+    this.currentOffset += this.currentLimit;
+
+    this.startLoading();
+
+    // Fetch next batch
+    const nextHighlights = await this.db.getVisibleHighlightIds(
+      this.currentLimit,
+      this.currentOffset
+    );
+
+    // Transform to display format
+    const highlightsToShow: HighlightWithMeta[] = nextHighlights.map(
+      (highlight: any) => {
+        const snoozeCount = highlight.snoozeHistory
+          ? JSON.parse(highlight.snoozeHistory).length
+          : 0;
+
+        return {
+          id: highlight.id,
+          text: highlight.text || "",
+          source_title: highlight.book?.title || "Unknown",
+          source_author: highlight.book?.author || undefined,
+          highlighted_at: highlight.highlightedAt || undefined,
+          snooze_count: snoozeCount,
+          book_id: highlight.bookId,
+          unique_url: highlight.book?.uniqueUrl || undefined,
+        };
+      }
+    ) as HighlightWithMeta[];
+
+    this.stopLoading();
+
+    // Send append message to add highlights to existing list
+    this.panel.webview.postMessage({
+      type: "appendHighlights",
+      highlights: highlightsToShow,
+    });
   }
 
   private async handleSearch(query: string): Promise<void> {
@@ -371,10 +427,17 @@ export class WebviewManager {
     </head>
     <body>
       <div id="app">
-        <div id="search-ui" style="display: none; margin-bottom: 10px;">
+        <div id="search-ui" style="display: none; padding: 8px; border-bottom: 1px solid var(--vscode-panel-border);">
           <input type="text" id="search-input" placeholder="Search highlights... (press Enter)" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
         </div>
-        <div id="highlights-container"></div>
+        <div id="main-container">
+          <div id="left-pane">
+            <div id="highlights-list"></div>
+          </div>
+          <div id="right-pane">
+            <div id="details-container"></div>
+          </div>
+        </div>
         <div class="actions">
           <button id="snooze-all">Snooze All</button>
           <button id="archive-all">Archive All</button>

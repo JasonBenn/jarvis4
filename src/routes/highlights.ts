@@ -2,8 +2,10 @@ import { FastifyInstance } from 'fastify';
 import * as highlightService from '../services/highlightService.js';
 
 export async function highlightRoutes(fastify: FastifyInstance) {
-  fastify.get('/highlights', async (request, reply) => {
-    const highlights = await highlightService.getVisibleHighlights();
+  fastify.get<{ Querystring: { limit?: string; offset?: string } }>('/highlights', async (request, reply) => {
+    const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined;
+    const offset = request.query.offset ? parseInt(request.query.offset, 10) : undefined;
+    const highlights = await highlightService.getVisibleHighlights(limit, offset);
     return { highlights };
   });
 

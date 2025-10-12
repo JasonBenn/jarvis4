@@ -1,20 +1,57 @@
 (function() {
   const vscode = acquireVsCodeApi();
   let highlights = [];
-  let selectedIndex = 0;
-  let expandedIds = new Set();
+  let selectedId = null; // Track by ID instead of index
   let checkedIds = new Set();
   let isSearchMode = false;
   let searchResults = [];
   let isLoading = false;
+  let hasRequestedMore = false;
+  let hasReachedEnd = false;
+
+  function getSelectedIndex(displayHighlights) {
+    if (!selectedId) return 0;
+    const index = displayHighlights.findIndex(h => h.id === selectedId);
+    return index >= 0 ? index : 0;
+  }
+
+  function checkLoadMore() {
+    if (isSearchMode || isLoading || hasRequestedMore || hasReachedEnd) return;
+
+    const displayHighlights = highlights;
+    const selectedIndex = getSelectedIndex(displayHighlights);
+    const threshold = Math.max(0, displayHighlights.length - 5);
+
+    if (selectedIndex >= threshold && displayHighlights.length > 0) {
+      hasRequestedMore = true;
+      vscode.postMessage({ type: 'loadMore' });
+    }
+  }
 
   window.addEventListener('message', event => {
     const message = event.data;
     if (message.type === 'updateHighlights') {
       highlights = message.highlights;
-      // Reset selection if out of bounds
-      if (selectedIndex >= highlights.length) {
-        selectedIndex = Math.max(0, highlights.length - 1);
+      hasRequestedMore = false; // Reset for next batch
+      hasReachedEnd = false; // Reset end flag on new load
+      // Initialize selection to first highlight if not set or invalid
+      if (!selectedId || !highlights.find(h => h.id === selectedId)) {
+        selectedId = highlights.length > 0 ? highlights[0].id : null;
+      }
+      render();
+    } else if (message.type === 'appendHighlights') {
+      // Append new highlights to existing list
+      if (message.highlights.length === 0) {
+        // No more highlights available
+        hasReachedEnd = true;
+        hasRequestedMore = false;
+      } else {
+        highlights = highlights.concat(message.highlights);
+        hasRequestedMore = false; // Allow requesting more again
+      }
+      // Initialize selection if not set
+      if (!selectedId && highlights.length > 0) {
+        selectedId = highlights[0].id;
       }
       render();
     } else if (message.type === 'searchResults') {
@@ -27,7 +64,8 @@
       isSearchMode = true;
 
       // Set focus to first unchecked highlight
-      selectedIndex = checkedResults.length;
+      const firstUncheckedIndex = checkedResults.length;
+      selectedId = searchResults[firstUncheckedIndex]?.id || (searchResults.length > 0 ? searchResults[0].id : null);
 
       render();
     } else if (message.type === 'startLoading') {
@@ -39,8 +77,49 @@
     }
   });
 
+  function groupByBook(highlights) {
+    // Group only ADJACENT highlights from the same source
+    const groups = [];
+    let currentSource = null;
+    let currentGroup = null;
+
+    highlights.forEach(h => {
+      const source = h.source_author
+        ? `${h.source_title} by ${h.source_author}`
+        : h.source_title || 'Unknown';
+
+      if (source !== currentSource) {
+        // Start a new group
+        if (currentGroup) {
+          groups.push(currentGroup);
+        }
+        currentSource = source;
+        currentGroup = {
+          source: source,
+          highlights: [h]
+        };
+      } else {
+        // Add to current group
+        currentGroup.highlights.push(h);
+      }
+    });
+
+    // Add the last group
+    if (currentGroup) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  }
+
+  function truncateText(text, maxLength = 80) {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  }
+
   function render() {
-    const container = document.getElementById('highlights-container');
+    const listContainer = document.getElementById('highlights-list');
+    const detailsContainer = document.getElementById('details-container');
 
     // Show search input if in search mode
     const searchUI = document.getElementById('search-ui');
@@ -52,59 +131,128 @@
 
     const displayHighlights = isSearchMode ? searchResults : highlights;
 
-    // Create loading placeholder if loading
-    const loadingItem = isLoading ? `
-      <div class="highlight loading-placeholder">
-        <div class="highlight-header">
-          <div class="highlight-source">
-            <span class="spinner">⟳</span>
-            Fetching new highlights from Readwise...
-          </div>
-        </div>
-      </div>
-    ` : '';
-
     if (displayHighlights.length === 0 && !isLoading) {
       const emptyMessage = isSearchMode ? 'No search results' : 'No highlights to review';
-      container.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
+      listContainer.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
+      detailsContainer.innerHTML = '';
       return;
     }
 
-    const highlightItems = displayHighlights.map((h, i) => {
-      const isFocused = i === selectedIndex && !isLoading; // Don't focus if loading placeholder at top
-      const isExpanded = expandedIds.has(h.id) || isFocused; // Expand if focused
-      const isChecked = checkedIds.has(h.id);
-      const source = h.source_author
-        ? `${h.source_title} by ${h.source_author}`
-        : h.source_title || 'Unknown';
-      const date = h.highlighted_at
-        ? new Date(h.highlighted_at).toLocaleDateString()
-        : '';
-      const snoozeCount = h.snooze_count > 0 ? `(Snoozed ${h.snooze_count}x)` : '';
+    // Group highlights by book
+    const groupedHighlights = groupByBook(displayHighlights);
 
-      return `
-        <div class="highlight ${isFocused ? 'focused' : ''} ${isChecked ? 'checked' : ''}" data-index="${i}">
+    // Render left pane (compact list)
+    let listHTML = '';
+    let itemIndex = 0;
+
+    if (isLoading) {
+      listHTML += `<div class="loading-indicator"><span class="spinner">⟳</span>Fetching highlights...</div>`;
+    }
+
+    for (const group of groupedHighlights) {
+      listHTML += `<div class="book-header">${group.source}</div>`;
+
+      group.highlights.forEach(h => {
+        const isFocused = h.id === selectedId;
+        const isChecked = checkedIds.has(h.id);
+        const checkbox = isChecked ? '☑' : '☐';
+        const truncatedText = truncateText(h.text);
+
+        listHTML += `
+          <div class="highlight-item ${isFocused ? 'focused' : ''} ${isChecked ? 'checked' : ''}" data-id="${h.id}">
+            <span class="checkbox">${checkbox}</span>${truncatedText}
+          </div>
+        `;
+        itemIndex++;
+      });
+    }
+
+    if (hasReachedEnd && displayHighlights.length > 0) {
+      listHTML += `<div class="end-of-list">— End of highlights —</div>`;
+    }
+
+    listHTML += `<div class="keyboard-hints">↑↓: Navigate • Space: Check • Enter: Integrate • S: Snooze • Backspace: Archive • O: Open • /: Search • E: Similar</div>`;
+
+    listContainer.innerHTML = listHTML;
+
+    // Scroll focused into view in left pane
+    const focusedEl = listContainer.querySelector('.focused');
+    if (focusedEl) {
+      focusedEl.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    }
+
+    // Render right pane (detail view)
+    renderDetails(displayHighlights);
+  }
+
+  function renderDetails(displayHighlights) {
+    const detailsContainer = document.getElementById('details-container');
+
+    // Always show checked highlights, plus focused highlight at the bottom
+    const checkedHighlights = displayHighlights.filter(h => checkedIds.has(h.id));
+    const focusedHighlight = displayHighlights.find(h => h.id === selectedId);
+
+    let detailHTML = '';
+
+    // Render checked highlights first
+    if (checkedHighlights.length > 0) {
+      detailHTML += checkedHighlights.map(h => {
+        const source = h.source_author
+          ? `${h.source_title} by ${h.source_author}`
+          : h.source_title || 'Unknown';
+        const date = h.highlighted_at
+          ? new Date(h.highlighted_at).toLocaleDateString()
+          : '';
+        const snoozeCount = h.snooze_count > 0 ? `(Snoozed ${h.snooze_count}x)` : '';
+
+        return `
+          <div class="highlight-detail checked">
+            <div class="highlight-header">
+              <div class="highlight-source">
+                ${source} ${snoozeCount}
+              </div>
+              <div class="highlight-date">${date}</div>
+            </div>
+            <div class="highlight-text">${h.text}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render focused highlight at the bottom (if not already checked)
+    if (focusedHighlight && !checkedIds.has(focusedHighlight.id)) {
+      const source = focusedHighlight.source_author
+        ? `${focusedHighlight.source_title} by ${focusedHighlight.source_author}`
+        : focusedHighlight.source_title || 'Unknown';
+      const date = focusedHighlight.highlighted_at
+        ? new Date(focusedHighlight.highlighted_at).toLocaleDateString()
+        : '';
+      const snoozeCount = focusedHighlight.snooze_count > 0 ? `(Snoozed ${focusedHighlight.snooze_count}x)` : '';
+
+      detailHTML += `
+        <div class="highlight-detail focused-only" id="focused-detail">
           <div class="highlight-header">
             <div class="highlight-source">
-              <span class="checkbox">${isChecked ? '☑' : '☐'}</span>
               ${source} ${snoozeCount}
             </div>
             <div class="highlight-date">${date}</div>
           </div>
-          <div class="highlight-text ${isExpanded ? '' : 'collapsed'}">
-            ${h.text}
-          </div>
+          <div class="highlight-text">${focusedHighlight.text}</div>
         </div>
       `;
-    }).join('');
+    }
 
-    // Combine loading placeholder at top with highlights
-    container.innerHTML = loadingItem + highlightItems;
+    if (detailHTML === '') {
+      detailsContainer.innerHTML = '<div class="empty-state">No highlight selected</div>';
+      return;
+    }
 
-    // Scroll focused into view
-    const focusedEl = container.querySelector('.focused');
-    if (focusedEl) {
-      focusedEl.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    detailsContainer.innerHTML = detailHTML;
+
+    // Scroll focused highlight into view
+    const focusedDetailEl = document.getElementById('focused-detail');
+    if (focusedDetailEl) {
+      focusedDetailEl.scrollIntoView({ block: 'nearest', behavior: 'instant' });
     }
   }
 
@@ -170,52 +318,82 @@
         break;
       case 'ArrowUp':
         e.preventDefault();
-        selectedIndex = Math.max(0, selectedIndex - 1);
+        const currentUpIndex = getSelectedIndex(displayHighlights);
+        const newUpIndex = Math.max(0, currentUpIndex - 1);
+        selectedId = displayHighlights[newUpIndex]?.id;
         render();
         break;
       case 'ArrowDown':
         e.preventDefault();
-        selectedIndex = Math.min(displayHighlights.length - 1, selectedIndex + 1);
+        const currentDownIndex = getSelectedIndex(displayHighlights);
+        const newDownIndex = Math.min(displayHighlights.length - 1, currentDownIndex + 1);
+        selectedId = displayHighlights[newDownIndex]?.id;
+        checkLoadMore();
         render();
         break;
       case ' ':
         e.preventDefault();
-        const currentHighlight = displayHighlights[selectedIndex];
-        const currentSource = currentHighlight.source_title;
-        const highlightsFromSource = displayHighlights.filter(h => h.source_title === currentSource);
         if (e.shiftKey) {
-          // Shift+Space toggles ALL highlights from the same source
-          const currentHighlight = displayHighlights[selectedIndex];
-          const currentSource = currentHighlight.source_title;
-          const highlightsFromSource = displayHighlights.filter(h => h.source_title === currentSource);
-          console.log('Toggling all highlights from source:', currentSource, 'count:', highlightsFromSource.length);
+          // Shift+Space toggles highlights in the current ADJACENT group only
+          const currentHighlight = displayHighlights.find(h => h.id === selectedId);
+          if (currentHighlight) {
+            const currentIndex = displayHighlights.findIndex(h => h.id === selectedId);
+            const currentSource = currentHighlight.source_author
+              ? `${currentHighlight.source_title} by ${currentHighlight.source_author}`
+              : currentHighlight.source_title || 'Unknown';
 
-          // Check if all highlights from this source are already checked
-          const allChecked = highlightsFromSource.every(h => checkedIds.has(h.id));
+            // Find the adjacent group by looking backwards and forwards from current index
+            const groupHighlights = [currentHighlight];
 
-          if (allChecked) {
-            // Uncheck and collapse all from this source
-            highlightsFromSource.forEach(h => {
-              checkedIds.delete(h.id);
-              expandedIds.delete(h.id);
-            });
-          } else {
-            // Check and expand all from this source
-            highlightsFromSource.forEach(h => {
-              checkedIds.add(h.id);
-              expandedIds.add(h.id);
-            });
+            // Look backwards
+            for (let i = currentIndex - 1; i >= 0; i--) {
+              const h = displayHighlights[i];
+              const source = h.source_author
+                ? `${h.source_title} by ${h.source_author}`
+                : h.source_title || 'Unknown';
+              if (source === currentSource) {
+                groupHighlights.unshift(h);
+              } else {
+                break;
+              }
+            }
+
+            // Look forwards
+            for (let i = currentIndex + 1; i < displayHighlights.length; i++) {
+              const h = displayHighlights[i];
+              const source = h.source_author
+                ? `${h.source_title} by ${h.source_author}`
+                : h.source_title || 'Unknown';
+              if (source === currentSource) {
+                groupHighlights.push(h);
+              } else {
+                break;
+              }
+            }
+
+            // Check if all highlights in this group are already checked
+            const allChecked = groupHighlights.every(h => checkedIds.has(h.id));
+
+            if (allChecked) {
+              // Uncheck all in this group
+              groupHighlights.forEach(h => {
+                checkedIds.delete(h.id);
+              });
+            } else {
+              // Check all in this group
+              groupHighlights.forEach(h => {
+                checkedIds.add(h.id);
+              });
+            }
           }
         } else {
           // Space toggles individual highlight
-          const id = displayHighlights[selectedIndex].id;
-          console.log('Toggling individual highlight:', id);
-          if (checkedIds.has(id)) {
-            checkedIds.delete(id);
-            expandedIds.delete(id);
-          } else {
-            checkedIds.add(id);
-            expandedIds.add(id);
+          if (selectedId) {
+            if (checkedIds.has(selectedId)) {
+              checkedIds.delete(selectedId);
+            } else {
+              checkedIds.add(selectedId);
+            }
           }
         }
         render();
@@ -225,14 +403,16 @@
         // Integrate all checked highlights (or just focused one if none checked)
         const idsToIntegrate = checkedIds.size > 0
           ? Array.from(checkedIds)
-          : [displayHighlights[selectedIndex].id];
+          : (selectedId ? [selectedId] : []);
 
-        vscode.postMessage({
-          type: 'integrate',
-          highlightIds: idsToIntegrate
-        });
-        // Clear checked after integrating
-        checkedIds.clear();
+        if (idsToIntegrate.length > 0) {
+          vscode.postMessage({
+            type: 'integrate',
+            highlightIds: idsToIntegrate
+          });
+          // Clear checked after integrating
+          checkedIds.clear();
+        }
         break;
       case 's':
       case 'S':
@@ -240,34 +420,38 @@
         // Snooze all checked highlights (or just focused one if none checked)
         const idsToSnooze = checkedIds.size > 0
           ? Array.from(checkedIds)
-          : [displayHighlights[selectedIndex].id];
+          : (selectedId ? [selectedId] : []);
 
-        vscode.postMessage({
-          type: 'snooze',
-          highlightIds: idsToSnooze
-        });
-        // Clear checked after snoozing
-        checkedIds.clear();
+        if (idsToSnooze.length > 0) {
+          vscode.postMessage({
+            type: 'snooze',
+            highlightIds: idsToSnooze
+          });
+          // Clear checked after snoozing
+          checkedIds.clear();
+        }
         break;
       case 'Backspace':
         e.preventDefault();
         // Archive all checked highlights (or just focused one if none checked)
         const idsToArchive = checkedIds.size > 0
           ? Array.from(checkedIds)
-          : [displayHighlights[selectedIndex].id];
+          : (selectedId ? [selectedId] : []);
 
-        vscode.postMessage({
-          type: 'archive',
-          highlightIds: idsToArchive
-        });
-        // Clear checked after archiving
-        checkedIds.clear();
+        if (idsToArchive.length > 0) {
+          vscode.postMessage({
+            type: 'archive',
+            highlightIds: idsToArchive
+          });
+          // Clear checked after archiving
+          checkedIds.clear();
+        }
         break;
       case 'o':
       case 'O':
         e.preventDefault();
         // Open Readwise source for the focused highlight
-        const focusedHighlight = displayHighlights[selectedIndex];
+        const focusedHighlight = displayHighlights.find(h => h.id === selectedId);
         if (focusedHighlight && focusedHighlight.unique_url) {
           vscode.postMessage({
             type: 'openUrl',
@@ -280,19 +464,18 @@
 
   // Click handler for highlights
   document.addEventListener('click', e => {
-    const highlightEl = e.target.closest('.highlight');
+    const highlightEl = e.target.closest('.highlight-item');
     if (highlightEl) {
-      const index = parseInt(highlightEl.dataset.index);
-      if (!isNaN(index) && index >= 0 && index < displayHighlights.length) {
-        const id = displayHighlights[index].id;
+      const id = highlightEl.dataset.id;
+      if (id) {
+        // Set selection to clicked item
+        selectedId = id;
 
         // Toggle checkbox
         if (checkedIds.has(id)) {
           checkedIds.delete(id);
-          expandedIds.delete(id);
         } else {
           checkedIds.add(id);
-          expandedIds.add(id);
         }
 
         render();

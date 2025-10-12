@@ -40,9 +40,14 @@ export class HighlightDatabase {
   }
 
 
-  async getVisibleHighlightIds(): Promise<any[]> {
+  async getVisibleHighlightIds(limit?: number, offset?: number): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/highlights`);
+      const params = new URLSearchParams();
+      if (limit !== undefined) params.append('limit', limit.toString());
+      if (offset !== undefined) params.append('offset', offset.toString());
+
+      const url = `${this.baseUrl}/highlights${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch highlights: ${response.statusText}`);
       }
