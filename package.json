@@ -11,6 +11,7 @@
     "db:highlights:all": "pnpm run db \"SELECT * FROM highlights;\"",
     "db:highlights:changed": "pnpm run db \"SELECT * FROM highlights WHERE status <> 'NEW';\"",
     "upload:run": "tsx scripts/upload-to-readwise.ts",
+    "cursor-worldview:link": "ln -sf \"$HOME/code/jarvis4/prompts/worldview.md\" \"$HOME/.cursor/commands/worldview.md\" && echo '✅ Cursor worldview prompt symlinked!'",
     "open-worldview:run": "bash scripts/open-worldview.sh",
     "open-worldview:link": "ln -sf \"$HOME/code/jarvis4/scripts/open-worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
     "recent-changes:run": "node scripts/recent-changes.js",
