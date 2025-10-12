@@ -6,6 +6,7 @@
   let checkedIds = new Set();
   let isSearchMode = false;
   let searchResults = [];
+  let isLoading = false;
 
   window.addEventListener('message', event => {
     const message = event.data;
@@ -29,6 +30,12 @@
       selectedIndex = checkedResults.length;
 
       render();
+    } else if (message.type === 'startLoading') {
+      isLoading = true;
+      render();
+    } else if (message.type === 'stopLoading') {
+      isLoading = false;
+      render();
     }
   });
 
@@ -45,14 +52,26 @@
 
     const displayHighlights = isSearchMode ? searchResults : highlights;
 
-    if (displayHighlights.length === 0) {
+    // Create loading placeholder if loading
+    const loadingItem = isLoading ? `
+      <div class="highlight loading-placeholder">
+        <div class="highlight-header">
+          <div class="highlight-source">
+            <span class="spinner">⟳</span>
+            Fetching new highlights from Readwise...
+          </div>
+        </div>
+      </div>
+    ` : '';
+
+    if (displayHighlights.length === 0 && !isLoading) {
       const emptyMessage = isSearchMode ? 'No search results' : 'No highlights to review';
       container.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
       return;
     }
 
-    container.innerHTML = displayHighlights.map((h, i) => {
-      const isFocused = i === selectedIndex;
+    const highlightItems = displayHighlights.map((h, i) => {
+      const isFocused = i === selectedIndex && !isLoading; // Don't focus if loading placeholder at top
       const isExpanded = expandedIds.has(h.id) || isFocused; // Expand if focused
       const isChecked = checkedIds.has(h.id);
       const source = h.source_author
@@ -78,6 +97,9 @@
         </div>
       `;
     }).join('');
+
+    // Combine loading placeholder at top with highlights
+    container.innerHTML = loadingItem + highlightItems;
 
     // Scroll focused into view
     const focusedEl = container.querySelector('.focused');

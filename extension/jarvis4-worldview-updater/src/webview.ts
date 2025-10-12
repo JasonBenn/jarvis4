@@ -151,6 +151,18 @@ export class WebviewManager {
     });
   }
 
+  startLoading(): void {
+    if (this.panel) {
+      this.panel.webview.postMessage({ type: "startLoading" });
+    }
+  }
+
+  stopLoading(): void {
+    if (this.panel) {
+      this.panel.webview.postMessage({ type: "stopLoading" });
+    }
+  }
+
   private async handleIntegrate(highlightIds: string[]): Promise<void> {
     // Get highlights from DB with book data
     const highlightTexts = await Promise.all(
@@ -232,16 +244,21 @@ export class WebviewManager {
         results
           .slice(0, 30)
           .map(async (result) => {
-            const snoozeCount = await this.db.getSnoozeCount(String(result.id));
+            const highlightId = String(result.id);
+            const snoozeCount = await this.db.getSnoozeCount(highlightId);
+
+            // Get the full highlight from DB to get the book ID
+            const highlightState = await this.db.getHighlightState(highlightId);
+            const bookId = highlightState?.bookId || 0;
 
             return {
-              id: String(result.id),
+              id: highlightId,
               text: result.attributes.highlight_plaintext,
               source_title: result.attributes.document_title || "Unknown",
               source_author: result.attributes.document_author,
               highlighted_at: undefined, // Not provided in MCP response
               snooze_count: snoozeCount,
-              book_id: result.id, // Using highlight ID as fallback
+              book_id: bookId,
             };
           })
       );

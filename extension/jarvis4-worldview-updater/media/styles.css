@@ -11,6 +11,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 #highlights-container {
@@ -141,4 +143,23 @@ body {
   font-size: 10px;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
+}
+
+/* Loading spinner */
+.loading-placeholder {
+  background-color: var(--vscode-list-hoverBackground);
+  border-left-color: var(--vscode-textLink-activeForeground);
+  cursor: default;
+  pointer-events: none;
+}
+
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
