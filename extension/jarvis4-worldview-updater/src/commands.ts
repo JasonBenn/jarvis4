@@ -29,20 +29,20 @@ export function registerCommands(
           progress.report({ message: 'Downloading from Readwise...' });
           const highlightData = await readwise.fetchAllHighlightsWithBooks(lastFetch);
 
-          // Store highlights in webview manager
-          webview.setHighlights(highlightData);
+          // Sync to database
+          progress.report({ message: 'Syncing to database...' });
+          const books = highlightData.map(item => item.book);
+          const highlights = highlightData.map(item => item.highlight);
 
-          // Track new highlight IDs in database (no content)
-          progress.report({ message: 'Processing highlights...' });
-          let newCount = 0;
-          for (const item of highlightData) {
-            const highlightId = String(item.highlight.id);
-            const existingState = await db.getHighlightState(highlightId);
-            if (!existingState) {
-              await db.trackHighlight(highlightId);
-              newCount++;
-            }
-          }
+          // Remove duplicates by user_book_id
+          const uniqueBooks = books.filter((book, index, self) =>
+            index === self.findIndex(b => b.user_book_id === book.user_book_id)
+          );
+
+          await db.syncHighlights(uniqueBooks, highlights);
+
+          // Store highlights in webview manager for this session
+          webview.setHighlights(highlightData);
 
           // Update lastReadwiseFetch now that we have persistence
           await db.setLastReadwiseFetch(new Date().toISOString());
@@ -51,7 +51,7 @@ export function registerCommands(
           await webview.show();
 
           vscode.window.showInformationMessage(
-            `Fetched ${highlightData.length} highlights from Readwise (${newCount} new)`
+            `Fetched ${highlightData.length} highlights from Readwise`
           );
         } catch (error) {
           vscode.window.showErrorMessage(`Error fetching highlights: ${error}`);

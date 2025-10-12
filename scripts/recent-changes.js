@@ -16,11 +16,17 @@ function parseLogDate(dateStr) {
 
 // Transform header for Readwise-optimized format
 function transformHeaderForReadwise(header) {
-  // Step 1: Remove date prefix from headers: ### [[YYYY-MM-DD]] Title -> ### Title
+  // Step 1: Extract date from headers and move it below
+  const dateMatch = header.match(/\[\[(\d{4}-\d{2}-\d{2})\]\]/);
   let transformed = header.replace(/^### \[\[(\d{4}-\d{2}-\d{2})\]\] /, "### ");
 
   // Step 2: Remove #Question tag from anywhere in headers
   transformed = transformed.replace(/#Question:?/, "").replace(/\s+/g, " ");
+
+  // Step 3: Add date below the header
+  if (dateMatch) {
+    transformed += ` [[${dateMatch[1]}]]`;
+  }
 
   return transformed;
 }

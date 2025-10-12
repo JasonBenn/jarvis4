@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import { highlightRoutes } from './routes/highlights.js';
 import { generatedImageRoutes } from './routes/generated-images.js';
 import { metadataRoutes } from './routes/metadata.js';
+import { syncRoutes } from './routes/sync.js';
 
 const PORT = parseInt(process.env.JARVIS4_PORT || '3456');
 
@@ -26,6 +27,7 @@ fastify.get('/health', async (request, reply) => {
 await fastify.register(highlightRoutes);
 await fastify.register(generatedImageRoutes);
 await fastify.register(metadataRoutes);
+await fastify.register(syncRoutes);
 
 // Start server
 try {

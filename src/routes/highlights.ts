@@ -8,7 +8,7 @@ export async function highlightRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get<{ Params: { id: string } }>('/highlights/:id', async (request, reply) => {
-    const highlight = await highlightService.getHighlight(request.params.id);
+    const highlight = await highlightService.getHighlightWithBook(request.params.id);
     if (!highlight) {
       return reply.code(404).send({ error: 'Highlight not found' });
     }

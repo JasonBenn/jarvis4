@@ -123,39 +123,27 @@ export class WebviewManager {
       return;
     }
 
-    // Get visible highlight IDs from DB (NEW, not snoozed, or snooze ended)
-    const visibleIds = await this.db.getVisibleHighlightIds();
+    // Get visible highlights WITH book data from DB
+    const visibleHighlights = await this.db.getVisibleHighlightIds();
 
-    // If we have highlights cached from recent fetch, use those
-    // Otherwise, fetch all from API
-    if (this.highlights.length === 0) {
-      try {
-        this.highlights = await this.readwise.fetchAllHighlightsWithBooks();
-      } catch (error) {
-        console.error("Failed to fetch highlights from Readwise:", error);
-        vscode.window.showErrorMessage(`Failed to fetch highlights: ${error}`);
-        return;
-      }
-    }
+    // Transform to display format and limit to 30
+    const highlightsToShow: HighlightWithMeta[] = visibleHighlights
+      .slice(0, 30)
+      .map((highlight: any) => {
+        const snoozeCount = highlight.snoozeHistory
+          ? JSON.parse(highlight.snoozeHistory).length
+          : 0;
 
-    // Filter to only visible IDs and limit to 30
-    const highlightsToShow: HighlightWithMeta[] = await Promise.all(
-      this.highlights
-        .filter((item) => visibleIds.includes(String(item.highlight.id)))
-        .slice(0, 30)
-        .map(async (item) => {
-          const snoozeCount = await this.db.getSnoozeCount(String(item.highlight.id));
-          return {
-            id: String(item.highlight.id),
-            text: item.highlight.text,
-            source_title: item.book.title || "Unknown",
-            source_author: item.book.author || undefined,
-            highlighted_at: item.highlight.highlighted_at || undefined,
-            snooze_count: snoozeCount,
-            book_id: item.book.user_book_id,
-          };
-        })
-    );
+        return {
+          id: highlight.id,
+          text: highlight.text || "",
+          source_title: highlight.book?.title || "Unknown",
+          source_author: highlight.book?.author || undefined,
+          highlighted_at: highlight.highlightedAt || undefined,
+          snooze_count: snoozeCount,
+          book_id: highlight.bookId,
+        };
+      }) as HighlightWithMeta[];
 
     this.panel.webview.postMessage({
       type: "updateHighlights",
@@ -164,22 +152,21 @@ export class WebviewManager {
   }
 
   private async handleIntegrate(highlightIds: string[]): Promise<void> {
-    // Get highlights from cached API data
-    const highlightTexts = highlightIds
-      .map((id) =>
-        this.highlights.find((item) => String(item.highlight.id) === id)
-      )
-      .filter((item) => item !== undefined)
-      .map((item) => {
-        const source = item!.book.author
-          ? `${item!.book.title} by ${item!.book.author}`
-          : item!.book.title;
-        const readwiseUrl = `wiseread:///read/${item!.book.user_book_id}`;
-        return `<highlight>\n${
-          item!.highlight.text
-        }\n— ${source}\n— ${readwiseUrl}\n</highlight>`;
+    // Get highlights from DB with book data
+    const highlightTexts = await Promise.all(
+      highlightIds.map(async (id) => {
+        const highlight = await this.db.getHighlightState(id);
+        if (!highlight || !highlight.book) return null;
+
+        const source = highlight.book.author
+          ? `${highlight.book.title} by ${highlight.book.author}`
+          : highlight.book.title;
+        const readwiseUrl = `wiseread:///read/${highlight.bookId}`;
+        return `<highlight>\n${highlight.text}\n— ${source}\n— ${readwiseUrl}\n</highlight>`;
       })
-      .join("\n\n");
+    );
+
+    const validTexts = highlightTexts.filter(t => t !== null).join("\n\n");
 
     // Update status in DB for all
     for (const id of highlightIds) {
@@ -187,7 +174,7 @@ export class WebviewManager {
     }
 
     // Use /worldview command instead of pasting full prompt
-    await this.useWorldviewCommand(highlightTexts);
+    await this.useWorldviewCommand(validTexts);
 
     // Refresh view
     await this.refresh();
@@ -241,21 +228,23 @@ export class WebviewManager {
 
       log('Search results sample:', results.slice(0, 2));
 
-      const matchingHighlights: HighlightWithMeta[] = results
-        .slice(0, 30)
-        .map((result) => {
-          const snoozeCount = this.db.getSnoozeCount(String(result.id));
+      const matchingHighlights: HighlightWithMeta[] = await Promise.all(
+        results
+          .slice(0, 30)
+          .map(async (result) => {
+            const snoozeCount = await this.db.getSnoozeCount(String(result.id));
 
-          return {
-            id: String(result.id),
-            text: result.attributes.highlight_plaintext,
-            source_title: result.attributes.document_title || "Unknown",
-            source_author: result.attributes.document_author,
-            highlighted_at: undefined, // Not provided in MCP response
-            snooze_count: snoozeCount,
-            book_id: result.id, // Using highlight ID as fallback
-          };
-        });
+            return {
+              id: String(result.id),
+              text: result.attributes.highlight_plaintext,
+              source_title: result.attributes.document_title || "Unknown",
+              source_author: result.attributes.document_author,
+              highlighted_at: undefined, // Not provided in MCP response
+              snooze_count: snoozeCount,
+              book_id: result.id, // Using highlight ID as fallback
+            };
+          })
+      );
 
       this.panel.webview.postMessage({
         type: "searchResults",

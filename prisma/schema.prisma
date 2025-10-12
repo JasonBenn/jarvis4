@@ -10,16 +10,63 @@ datasource db {
   url      = "file:./db.sqlite"
 }
 
+model Book {
+  id              Int      @id // user_book_id from Readwise
+  title           String
+  author          String
+  readableTitle   String
+  source          String
+  coverImageUrl   String
+  uniqueUrl       String?
+  summary         String?
+  bookTags        String?  // JSON array of tags
+  category        String
+  documentNote    String?
+  readwiseUrl     String
+  sourceUrl       String?
+  asin            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  highlights      Highlight[]
+
+  @@index([category])
+  @@index([updatedAt])
+}
+
 model Highlight {
-  id            String    @id
-  status        String    @default("NEW") // NEW, INTEGRATED, ARCHIVED
-  snoozeHistory String?   // JSON string
-  nextShowDate  DateTime?
-  firstSeen     DateTime
-  lastUpdated   DateTime
+  id              String    @id  // Readwise highlight ID as string
+  text            String    @default("")
+  location        Int?
+  locationType    String    @default("page")
+  note            String?
+  color           String?
+  highlightedAt   String    @default("")
+  createdAt       String    @default("")
+  updatedAt       String    @default("")
+  externalId      String?
+  endLocation     Int?
+  url             String?
+  tags            String?  // JSON array of tags
+  isFavorite      Boolean?
+  isDiscard       Boolean?
+  readwiseUrl     String?
+
+  // Tracking fields
+  status          String    @default("NEW") // NEW, INTEGRATED, ARCHIVED
+  snoozeHistory   String?   // JSON string
+  nextShowDate    DateTime?
+  firstSeen       DateTime  @default(now())
+  lastUpdated     DateTime  @default(now())
+
+  // Book relationship
+  bookId          Int       @default(0)
+  book            Book?     @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([nextShowDate])
+  @@index([bookId])
+  @@index([highlightedAt])
 }
 
 model GeneratedImage {

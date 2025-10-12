@@ -1,10 +1,17 @@
 interface HighlightState {
   id: string;
+  text: string;
   status: 'NEW' | 'INTEGRATED' | 'ARCHIVED';
   snoozeHistory: string | null;
   nextShowDate: string | null;
   firstSeen: string;
   lastUpdated: string;
+  bookId: number;
+  book?: {
+    id: number;
+    title: string;
+    author: string;
+  };
 }
 
 export class HighlightDatabase {
@@ -32,14 +39,14 @@ export class HighlightDatabase {
   }
 
 
-  async getVisibleHighlightIds(): Promise<string[]> {
+  async getVisibleHighlightIds(): Promise<any[]> {
     try {
       const response = await fetch(`${this.baseUrl}/highlights`);
       if (!response.ok) {
         throw new Error(`Failed to fetch highlights: ${response.statusText}`);
       }
-      const data = await response.json();
-      return data.highlights.map((h: any) => h.id);
+      const data = await response.json() as { highlights: any[] };
+      return data.highlights;
     } catch (error) {
       console.error('Error fetching visible highlights:', error);
       return [];
@@ -55,7 +62,8 @@ export class HighlightDatabase {
       if (!response.ok) {
         throw new Error(`Failed to fetch highlight state: ${response.statusText}`);
       }
-      return await response.json();
+      const data = await response.json() as HighlightState;
+      return data;
     } catch (error) {
       console.error('Error fetching highlight state:', error);
       return null;
@@ -136,7 +144,7 @@ export class HighlightDatabase {
       if (!response.ok) {
         throw new Error(`Failed to fetch metadata: ${response.statusText}`);
       }
-      const data = await response.json();
+      const data = await response.json() as { key: string; value: string };
       return data.value;
     } catch (error) {
       console.error('Error fetching metadata:', error);
@@ -156,6 +164,24 @@ export class HighlightDatabase {
       }
     } catch (error) {
       console.error('Error setting metadata:', error);
+    }
+  }
+
+  async syncHighlights(books: any[], highlights: any[]): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ books, highlights }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to sync: ${response.statusText}`);
+      }
+      const result = await response.json();
+      console.log('Synced to DB:', result);
+    } catch (error) {
+      console.error('Error syncing highlights:', error);
+      throw error;
     }
   }
 
