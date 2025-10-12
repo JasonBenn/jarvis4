@@ -20,7 +20,7 @@ A VS Code extension that integrates Readwise highlights into the Cursor Compose 
    - **S**: Snooze (add timestamp to snooze_history, remove from view)
    - **BACKSPACE**: Archive (mark as ARCHIVED, remove from view)
 7. Buttons at bottom: "Snooze All" and "Archive All"
-8. When ENTER pressed: highlight text appended to `prompts/worldview-update.md` and full prompt pasted into Compose
+8. When ENTER pressed: `/worldview` command typed in Compose followed by highlight text
 
 ---
 
@@ -163,37 +163,30 @@ panel.webview.onDidReceiveMessage(message => {
 });
 ```
 
-**Prompt Generation & Compose Integration**:
+**Compose Integration with /worldview Command**:
 ```typescript
-// Read the worldview-update prompt template
-const promptPath = vscode.Uri.joinPath(
-  context.extensionUri,
-  'prompts',
-  'worldview-update.md'
-);
-const promptDoc = await vscode.workspace.openTextDocument(promptPath);
-const basePrompt = promptDoc.getText();
-
-// Append selected highlight(s) in memory
+// Format selected highlight(s)
 const highlightText = formatHighlight(highlight);
-const fullPrompt = `${basePrompt}\n\n${highlightText}`;
 
-// Insert into Compose via clipboard + keyboard automation
+// Insert into Compose via /worldview command + keyboard automation
 // Note: Cursor Compose has no programmatic API (as of 2025)
 const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
-const escapedText = fullPrompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+const escapedHighlights = highlightText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 const script = `
-  set the clipboard to "${escapedText}"
   tell application "Cursor"
     activate
     delay 0.2
     tell application "System Events"
       keystroke "i" using {command down}  -- Open Compose (Cmd+I)
       delay 0.3
-      keystroke "v" using {command down}  -- Paste from clipboard
+      keystroke "/worldview"              -- Type worldview command
+      delay 0.2
+      key code 36                         -- Press Enter
+      delay 0.2
+      keystroke "${escapedHighlights}"    -- Type highlights
     end tell
   end tell
 `;
@@ -479,24 +472,14 @@ export class WebviewManager {
     const highlight = await this.getHighlightData(highlightId);
     if (!highlight) return;
 
-    // Read the worldview-update prompt template (bundled in extension)
-    const promptPath = vscode.Uri.joinPath(
-      this.context.extensionUri,
-      'prompts',
-      'worldview-update.md'
-    );
-    const promptDoc = await vscode.workspace.openTextDocument(promptPath);
-    const basePrompt = promptDoc.getText();
-
-    // Build full prompt with highlight appended (in memory only)
+    // Format highlight text
     const highlightText = this.formatHighlight(highlight);
-    const fullPrompt = `${basePrompt}\n\n${highlightText}`;
 
     // Update status in DB
     await this.db.updateStatus(highlightId, 'INTEGRATED');
 
-    // Paste to Compose
-    await this.pasteToCompose(fullPrompt);
+    // Use /worldview command instead of pasting full prompt
+    await this.useWorldviewCommand(highlightText);
 
     // Refresh view
     await this.refresh();
