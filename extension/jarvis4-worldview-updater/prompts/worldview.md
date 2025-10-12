@@ -127,9 +127,10 @@ Maintaining already-written notes in an outline is comparatively easy: just look
 
 Furthermore, to start a writing project with a blank outline, we need to have a topic and some angle in mind. We can [[Use notes to avoid preconceived conclusions]].
 
-Also, quotes should use > for multiline and " for one-line. 
+Also, quotes should use > for multiline and " for one-line.
 - Quotes should be cited. Use the `[^1]` syntax. At the end: `[^1]: Author Name, [Page Title](URL, if known), Year Published`.
 - IMPORTANT: do not make up URLs.
+- When provided with Readwise URLs in the format `wiseread:///read/{book_id}`, use those URLs directly in citations - they are valid deep links to open the source in Readwise.
 
 ## Document Format
 
@@ -164,6 +165,8 @@ When drafting or updating a document, you MUST create/update a log entry for tod
 
 #### #Question: What historical precedents exist for technologies that were simultaneously deflationary for end products but inflationary for capital requirements?
 </good-example>
+
+**Note on Readwise URLs**: The URLs in the format `wiseread:///read/{book_id}` are provided automatically and link directly to the source document in Readwise. Use these URLs exactly as provided - they are valid deep links that allow you to return to the original source material.
 
 <bad-example>
 ### [[2025-10-10]] updated note

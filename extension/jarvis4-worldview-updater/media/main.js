@@ -160,6 +160,19 @@
         // Clear checked after archiving
         checkedIds.clear();
         break;
+      case 'o':
+      case 'O':
+        e.preventDefault();
+        // Open Readwise source for the focused highlight
+        const focusedHighlight = highlights[selectedIndex];
+        if (focusedHighlight && focusedHighlight.book_id) {
+          const readwiseUrl = `wiseread:///read/${focusedHighlight.book_id}`;
+          vscode.postMessage({
+            type: 'openUrl',
+            url: readwiseUrl
+          });
+        }
+        break;
     }
   });
 

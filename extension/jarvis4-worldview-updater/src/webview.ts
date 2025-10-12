@@ -11,6 +11,7 @@ interface HighlightWithMeta {
   source_author?: string;
   highlighted_at?: string;
   snooze_count: number;
+  book_id: number;
 }
 
 export class WebviewManager {
@@ -68,6 +69,9 @@ export class WebviewManager {
           case 'archiveAll':
             await this.handleArchiveAll();
             break;
+          case 'openUrl':
+            await vscode.env.openExternal(vscode.Uri.parse(message.url));
+            break;
         }
       },
       undefined,
@@ -111,7 +115,8 @@ export class WebviewManager {
           source_title: item.book.title || 'Unknown',
           source_author: item.book.author || undefined,
           highlighted_at: item.highlight.highlighted_at || undefined,
-          snooze_count: snoozeCount
+          snooze_count: snoozeCount,
+          book_id: item.book.user_book_id
         };
       });
 
@@ -139,7 +144,8 @@ export class WebviewManager {
         const source = item!.book.author
           ? `${item!.book.title} by ${item!.book.author}`
           : item!.book.title;
-        return `<highlight>\n${item!.highlight.text}\n— ${source}\n</highlight>`;
+        const readwiseUrl = `wiseread:///read/${item!.book.user_book_id}`;
+        return `<highlight>\n${item!.highlight.text}\n— ${source}\n— ${readwiseUrl}\n</highlight>`;
       })
       .join('\n\n');
 
