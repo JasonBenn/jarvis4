@@ -19,7 +19,7 @@ export function registerCommands(
       }, async (progress) => {
         try {
           // Use persistent lastReadwiseFetch or default to 30 days ago
-          const lastFetch = db.getLastReadwiseFetch() || (() => {
+          const lastFetch = await db.getLastReadwiseFetch() || (() => {
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             return thirtyDaysAgo.toISOString();
@@ -37,15 +37,15 @@ export function registerCommands(
           let newCount = 0;
           for (const item of highlightData) {
             const highlightId = String(item.highlight.id);
-            const existingState = db.getHighlightState(highlightId);
+            const existingState = await db.getHighlightState(highlightId);
             if (!existingState) {
-              db.trackHighlight(highlightId);
+              await db.trackHighlight(highlightId);
               newCount++;
             }
           }
 
           // Update lastReadwiseFetch now that we have persistence
-          db.setLastReadwiseFetch(new Date().toISOString());
+          await db.setLastReadwiseFetch(new Date().toISOString());
 
           // Show webview
           await webview.show();

@@ -3,9 +3,21 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "backend:start": "launchctl start com.jasonbenn.jarvis4-backend",
+    "backend:stop": "launchctl stop com.jasonbenn.jarvis4-backend",
+    "backend:restart": "launchctl stop com.jasonbenn.jarvis4-backend && launchctl start com.jasonbenn.jarvis4-backend",
+    "backend:status": "launchctl list | grep jarvis4-backend",
+    "backend:logs": "tail -f logs/backend.log",
+    "backend:load": "launchctl load ~/Library/LaunchAgents/com.jasonbenn.jarvis4-backend.plist",
+    "backend:unload": "launchctl unload ~/Library/LaunchAgents/com.jasonbenn.jarvis4-backend.plist",
     "reinstall": "pnpm -C extension/jarvis4-worldview-updater reinstall",
-    "db": "sqlite3 \"$HOME/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db\"",
-    "db:migrate": "pgrep -x Cursor && echo '❌ Error: Cursor is running. Please close Cursor before running migrations.' && exit 1 || pnpm run db < extension/jarvis4-worldview-updater/migrations/v1-single-table.sql && echo '✅ Migration complete'",
+    "db": "sqlite3 db.sqlite",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:create": "prisma migrate dev --create-only",
+    "db:studio": "prisma studio",
     "db:metadata": "pnpm run db \"SELECT * FROM metadata;\"",
     "db:highlights:count": "pnpm run db \"SELECT COUNT(*) FROM highlights;\"",
     "db:highlights:all": "pnpm run db \"SELECT * FROM highlights;\"",
@@ -19,14 +31,16 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/sql.js": "^1.4.9",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@prisma/client": "^6.17.1",
     "dotenv": "^16.4.7",
+    "fastify": "^5.6.1",
     "marked": "^15.0.4",
     "openai": "^6.1.0",
-    "sql.js": "^1.13.0"
+    "prisma": "^6.17.1"
   }
 }

@@ -1,145 +1,116 @@
-import initSqlJs, { Database } from 'sql.js';
-import * as fs from 'fs';
-import * as path from 'path';
-
 interface HighlightState {
   id: string;
   status: 'NEW' | 'INTEGRATED' | 'ARCHIVED';
-  snooze_history: string | null;
-  next_show_date: string | null;
-  first_seen: string;
-  last_updated: string;
+  snoozeHistory: string | null;
+  nextShowDate: string | null;
+  firstSeen: string;
+  lastUpdated: string;
 }
 
 export class HighlightDatabase {
-  private db: Database | null = null;
-  private sqlJs: any = null;
+  private baseUrl: string;
 
-  constructor(private dbPath: string) {}
+  constructor(private dbPath: string) {
+    // dbPath is ignored now - we use HTTP backend
+    const port = process.env.JARVIS4_PORT || '3456';
+    this.baseUrl = `http://127.0.0.1:${port}`;
+  }
 
   async initialize(): Promise<void> {
-    // Initialize sql.js WASM module
-    this.sqlJs = await initSqlJs({
-      locateFile: (file) => {
-        // In VS Code extension, WASM file is in dist/
-        return path.join(__dirname, file);
-      }
-    });
-
-    // Load existing database or create new
-    let data: Uint8Array | undefined;
+    // Check if backend is running
     try {
-      if (fs.existsSync(this.dbPath)) {
-        const buffer = fs.readFileSync(this.dbPath);
-        data = new Uint8Array(buffer);
+      const response = await fetch(`${this.baseUrl}/health`);
+      if (!response.ok) {
+        throw new Error('Backend health check failed');
       }
-    } catch (err) {
-      console.warn('Could not load existing database:', err);
+      console.log('Connected to Jarvis4 backend');
+    } catch (error) {
+      throw new Error(
+        'Jarvis4 backend is not running. Start it with: launchctl start com.jasonbenn.jarvis4-backend'
+      );
     }
-
-    this.db = new this.sqlJs.Database(data);
-
-    console.log('Database initialized:', this.dbPath);
   }
 
 
-  getVisibleHighlightIds(): string[] {
-    if (!this.db) {return [];}
-
-    const now = new Date().toISOString();
-    const stmt = this.db.prepare(`
-      SELECT id FROM highlights
-      WHERE status = 'NEW'
-        AND (next_show_date IS NULL OR next_show_date <= ?)
-      ORDER BY first_seen DESC
-    `);
-
-    stmt.bind([now]);
-    const ids: string[] = [];
-    while (stmt.step()) {
-      ids.push(stmt.get()[0] as string);
+  async getVisibleHighlightIds(): Promise<string[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/highlights`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch highlights: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data.highlights.map((h: any) => h.id);
+    } catch (error) {
+      console.error('Error fetching visible highlights:', error);
+      return [];
     }
-    stmt.free();
-
-    return ids;
   }
 
-  getHighlightState(id: string): HighlightState | null {
-    if (!this.db) {return null;}
-
-    const stmt = this.db.prepare(`
-      SELECT * FROM highlights WHERE id = ?
-    `);
-    stmt.bind([id]);
-
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as unknown as HighlightState;
-      stmt.free();
-      return row;
+  async getHighlightState(id: string): Promise<HighlightState | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/highlights/${id}`);
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch highlight state: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching highlight state:', error);
+      return null;
     }
-
-    stmt.free();
-    return null;
   }
 
-  trackHighlight(id: string): void {
-    if (!this.db) {return;}
-
-    const now = new Date().toISOString();
-
-    // Insert highlight ID only
-    this.db.run(`
-      INSERT OR IGNORE INTO highlights
-      (id, status, snooze_history, next_show_date, first_seen, last_updated)
-      VALUES (?, 'NEW', NULL, NULL, ?, ?)
-    `, [id, now, now]);
-
-    this.save();
+  async trackHighlight(id: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/highlights/${id}/track`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to track highlight: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error tracking highlight:', error);
+    }
   }
 
-  updateStatus(id: string, status: 'INTEGRATED' | 'ARCHIVED'): void {
-    if (!this.db) {return;}
-
-    const now = new Date().toISOString();
-    this.db.run(`
-      UPDATE highlights
-      SET status = ?, last_updated = ?
-      WHERE id = ?
-    `, [status, now, id]);
-
-    this.save();
+  async updateStatus(id: string, status: 'INTEGRATED' | 'ARCHIVED'): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/highlights/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to update status: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
   }
 
-  snoozeHighlight(id: string, durationWeeks: number = 4): void {
-    if (!this.db) {return;}
-
-    const state = this.getHighlightState(id);
-    if (!state) {return;}
-
-    const now = new Date().toISOString();
-    const snoozeHistory = state.snooze_history
-      ? JSON.parse(state.snooze_history)
-      : [];
-    snoozeHistory.push(now);
-
-    const nextShowDate = new Date();
-    nextShowDate.setDate(nextShowDate.getDate() + (durationWeeks * 7));
-
-    this.db.run(`
-      UPDATE highlights
-      SET snooze_history = ?, next_show_date = ?, last_updated = ?
-      WHERE id = ?
-    `, [JSON.stringify(snoozeHistory), nextShowDate.toISOString(), now, id]);
-
-    this.save();
+  async snoozeHighlight(id: string, durationWeeks: number = 4): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/highlights/${id}/snooze`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ durationWeeks }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to snooze highlight: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error snoozing highlight:', error);
+    }
   }
 
-  getSnoozeCount(id: string): number {
-    const state = this.getHighlightState(id);
-    if (!state || !state.snooze_history) {return 0;}
+  async getSnoozeCount(id: string): Promise<number> {
+    const state = await this.getHighlightState(id);
+    if (!state || !state.snoozeHistory) {return 0;}
 
     try {
-      const history = JSON.parse(state.snooze_history as string);
+      const history = JSON.parse(state.snoozeHistory as string);
       return Array.isArray(history) ? history.length : 0;
     } catch {
       return 0;
@@ -148,64 +119,47 @@ export class HighlightDatabase {
 
 
   // Metadata operations
-  getLastReadwiseFetch(): string | null {
+  async getLastReadwiseFetch(): Promise<string | null> {
     return this.getMetadata('lastReadwiseFetch');
   }
 
-  setLastReadwiseFetch(date: string): void {
-    this.setMetadata('lastReadwiseFetch', date);
+  async setLastReadwiseFetch(date: string): Promise<void> {
+    await this.setMetadata('lastReadwiseFetch', date);
   }
 
-  private getMetadata(key: string): string | null {
-    if (!this.db) {return null;}
-
-    const stmt = this.db.prepare('SELECT value FROM metadata WHERE key = ?');
-    stmt.bind([key]);
-
-    if (stmt.step()) {
-      const value = stmt.get()[0] as string;
-      stmt.free();
-      return value;
-    }
-
-    stmt.free();
-    return null;
-  }
-
-  private setMetadata(key: string, value: string): void {
-    if (!this.db) {return;}
-
-    const now = new Date().toISOString();
-    this.db.run(`
-      INSERT OR REPLACE INTO metadata (key, value, updated_at)
-      VALUES (?, ?, ?)
-    `, [key, value, now]);
-
-    this.save();
-  }
-
-  private save(): void {
-    if (!this.db) {return;}
-
+  private async getMetadata(key: string): Promise<string | null> {
     try {
-      const dir = path.dirname(this.dbPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      const response = await fetch(`${this.baseUrl}/metadata/${key}`);
+      if (response.status === 404) {
+        return null;
       }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch metadata: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data.value;
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      return null;
+    }
+  }
 
-      const data = this.db.export();
-      const buffer = Buffer.from(data);
-      fs.writeFileSync(this.dbPath, buffer);
-    } catch (err) {
-      console.error('Failed to save database:', err);
+  private async setMetadata(key: string, value: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/metadata/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to set metadata: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error setting metadata:', error);
     }
   }
 
   dispose(): void {
-    if (this.db) {
-      this.save();
-      this.db.close();
-      this.db = null;
-    }
+    // No cleanup needed for HTTP client
   }
 }

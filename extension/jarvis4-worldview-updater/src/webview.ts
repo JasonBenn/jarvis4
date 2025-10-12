@@ -124,7 +124,7 @@ export class WebviewManager {
     }
 
     // Get visible highlight IDs from DB (NEW, not snoozed, or snooze ended)
-    const visibleIds = this.db.getVisibleHighlightIds();
+    const visibleIds = await this.db.getVisibleHighlightIds();
 
     // If we have highlights cached from recent fetch, use those
     // Otherwise, fetch all from API
@@ -139,21 +139,23 @@ export class WebviewManager {
     }
 
     // Filter to only visible IDs and limit to 30
-    const highlightsToShow: HighlightWithMeta[] = this.highlights
-      .filter((item) => visibleIds.includes(String(item.highlight.id)))
-      .slice(0, 30)
-      .map((item) => {
-        const snoozeCount = this.db.getSnoozeCount(String(item.highlight.id));
-        return {
-          id: String(item.highlight.id),
-          text: item.highlight.text,
-          source_title: item.book.title || "Unknown",
-          source_author: item.book.author || undefined,
-          highlighted_at: item.highlight.highlighted_at || undefined,
-          snooze_count: snoozeCount,
-          book_id: item.book.user_book_id,
-        };
-      });
+    const highlightsToShow: HighlightWithMeta[] = await Promise.all(
+      this.highlights
+        .filter((item) => visibleIds.includes(String(item.highlight.id)))
+        .slice(0, 30)
+        .map(async (item) => {
+          const snoozeCount = await this.db.getSnoozeCount(String(item.highlight.id));
+          return {
+            id: String(item.highlight.id),
+            text: item.highlight.text,
+            source_title: item.book.title || "Unknown",
+            source_author: item.book.author || undefined,
+            highlighted_at: item.highlight.highlighted_at || undefined,
+            snooze_count: snoozeCount,
+            book_id: item.book.user_book_id,
+          };
+        })
+    );
 
     this.panel.webview.postMessage({
       type: "updateHighlights",
@@ -181,7 +183,7 @@ export class WebviewManager {
 
     // Update status in DB for all
     for (const id of highlightIds) {
-      this.db.updateStatus(id, "INTEGRATED");
+      await this.db.updateStatus(id, "INTEGRATED");
     }
 
     // Use /worldview command instead of pasting full prompt
@@ -196,14 +198,14 @@ export class WebviewManager {
     const durationWeeks = config.get<number>("snoozeDurationWeeks") || 4;
 
     for (const id of highlightIds) {
-      this.db.snoozeHighlight(id, durationWeeks);
+      await this.db.snoozeHighlight(id, durationWeeks);
     }
     await this.refresh();
   }
 
   private async handleArchive(highlightIds: string[]): Promise<void> {
     for (const id of highlightIds) {
-      this.db.updateStatus(id, "ARCHIVED");
+      await this.db.updateStatus(id, "ARCHIVED");
     }
     await this.refresh();
   }
@@ -212,17 +214,17 @@ export class WebviewManager {
     const config = vscode.workspace.getConfiguration("readwise");
     const durationWeeks = config.get<number>("snoozeDurationWeeks") || 4;
 
-    const visibleIds = this.db.getVisibleHighlightIds();
+    const visibleIds = await this.db.getVisibleHighlightIds();
     for (const id of visibleIds) {
-      this.db.snoozeHighlight(id, durationWeeks);
+      await this.db.snoozeHighlight(id, durationWeeks);
     }
     await this.refresh();
   }
 
   private async handleArchiveAll(): Promise<void> {
-    const visibleIds = this.db.getVisibleHighlightIds();
+    const visibleIds = await this.db.getVisibleHighlightIds();
     for (const id of visibleIds) {
-      this.db.updateStatus(id, "ARCHIVED");
+      await this.db.updateStatus(id, "ARCHIVED");
     }
     await this.refresh();
   }

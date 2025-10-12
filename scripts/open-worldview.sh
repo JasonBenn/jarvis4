@@ -12,6 +12,28 @@
 # Open Cursor with Neighborhood Notes directory and run Readwise extension
 
 NOTES_DIR="$HOME/notes/Neighborhood\ Notes"
+BACKEND_URL="http://127.0.0.1:3456"
+
+# Check if backend is running
+if ! curl -s -f "${BACKEND_URL}/health" > /dev/null 2>&1; then
+    echo "Starting Jarvis4 backend..."
+    launchctl start com.jasonbenn.jarvis4-backend
+
+    # Wait for backend to be ready (max 10 seconds)
+    for i in {1..20}; do
+        if curl -s -f "${BACKEND_URL}/health" > /dev/null 2>&1; then
+            echo "Backend is ready!"
+            break
+        fi
+        sleep 0.5
+    done
+
+    # Check if backend started successfully
+    if ! curl -s -f "${BACKEND_URL}/health" > /dev/null 2>&1; then
+        echo "Error: Backend failed to start. Check logs with: tail -f ~/code/jarvis4/logs/backend.log"
+        exit 1
+    fi
+fi
 
 # Open Cursor with the directory in a new window and execute the Readwise command
 cursor -n "$NOTES_DIR" &
