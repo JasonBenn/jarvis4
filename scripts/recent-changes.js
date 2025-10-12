@@ -14,6 +14,17 @@ function parseLogDate(dateStr) {
   return match ? new Date(match[1]) : null;
 }
 
+// Transform header for Readwise-optimized format
+function transformHeaderForReadwise(header) {
+  // Step 1: Remove date prefix from headers: ### [[YYYY-MM-DD]] Title -> ### Title
+  let transformed = header.replace(/^### \[\[(\d{4}-\d{2}-\d{2})\]\] /, "### ");
+
+  // Step 2: Remove #Question tag from anywhere in headers
+  transformed = transformed.replace(/#Question:?/, "").replace(/\s+/g, " ");
+
+  return transformed;
+}
+
 // Extract log entries from a single file
 function extractLogEntries(filePath, fileName) {
   const content = fs.readFileSync(filePath, "utf-8");
@@ -88,7 +99,9 @@ function main() {
   const output = [];
 
   for (const entry of allEntries) {
-    output.push(entry.header);
+    // Transform header to Readwise-optimized format
+    const transformedHeader = transformHeaderForReadwise(entry.header);
+    output.push(transformedHeader);
     output.push(entry.body.join("\n"));
     output.push(""); // blank line between entries
   }

@@ -17,7 +17,7 @@ GOOD: "Economic AI notes: [[In Real interest rates may increase in the next 10 y
 BAD: "About AI being 'unprecedented': Your new reflection softens pure “unprecedented” framings; this is compatible with your existing notes but pushes against any implication that AI risk is sui generis. I didn’t find an explicit statement to the contrary elsewhere."
 
 Great questions are sometimes included in this wiki as changelog entries marked with #Question. Feel free to suggest them, but they should be the kind of questions that I'd enjoy researching and reading about in the future.
-FORMAT: ### #Question: {pithy title}\n{full thoughtful question}\n\n- *Related resources*: {comma-separated list with ideas for diverse content that might address the question from different angles}
+FORMAT: ### [[YYYY-MM-DD]] {pithy title} #Question\n{thoughtful question}\n\n- *Related resources*: {comma-separated list with ideas for diverse content that might address the question from different angles}\n- *[[YYYY-MM-DD]]*
 
 ## On great thought partnership
 
@@ -173,40 +173,49 @@ Each worldview note follows this structure:
 
 ### Changelog Log Format Algorithm
 
-When drafting or updating a document, you MUST create/update a log entry for today using this format:
+When drafting or updating a document, you MUST create/update a log entry for today. There are two types of changelog entries:
 
+**Type 1: Update Entry** (for changes to existing notes or new insights):
 ```
-### [[YYYY-MM-DD]] brief description of the change
-**Read**: [Article Title](URL) by Author, [Another Article](URL) by Author.
+### [[YYYY-MM-DD]] Brief description of the change
+- **Read**: [Article Title](URL) by Author, [Another Article](URL) by Author.
+- **Updated**: [Note Title](link-if-available). Brief description of what changed and why.
+- *[[YYYY-MM-DD]]*
+```
 
-**Updated**: [Note Title](link-if-available). Brief description of what changed and why.
-
-### #Question: Pithy question title
+**Type 2: Question Entry** (for intriguing questions worth researching):
+```
+### [[YYYY-MM-DD]] Pithy question title #Question
 Full thoughtful question that emerged from this work?
 
 - *Related resources*: comma-separated ideas for diverse content addressing the question
+- *[[YYYY-MM-DD]]*
 ```
 
+You can add one or both types depending on what emerged from the work.
+
 <good-example>
-### [[2025-10-10]] inflationary vs deflationary?
-**Read**: [AI #126: Go Fund Yourself](wiseread:///read/918503033) by TheZvi, [Meta's AI Abundance](wiseread:///read/826974402) by Ben Thompson.
+### [[2025-10-10]] Inflationary vs deflationary?
+- **Read**: [AI #126: Go Fund Yourself](wiseread:///read/918503033) by TheZvi, [Meta's AI Abundance](wiseread:///read/826974402) by Ben Thompson.
+- **Updated**: [AI creates deflationary abundance and inflationary capital demand simultaneously](link). The tension: AI makes goods/services cheaper through productivity gains, but requires massive capital investment in compute infrastructure, potentially keeping real interest rates high.
+- *[[2025-10-10]]*
+</good-example>
 
-**Updated**: [AI creates deflationary abundance and inflationary capital demand simultaneously](link). The tension: AI makes goods/services cheaper through productivity gains, but requires massive capital investment in compute infrastructure, potentially keeping real interest rates high.
-
-### #Question: Deflationary products, inflationary capital?
+<good-example>
+### [[2025-10-10]] Deflationary products, inflationary capital? #Question
 What historical precedents exist for technologies that were simultaneously deflationary for end products but inflationary for capital requirements?
-
 - *Related resources*: Industrial Revolution literature, railroad boom analyses, electricity infrastructure studies
+- *[[2025-10-10]]*
 </good-example>
 
 **Note on Readwise URLs**: The URLs in the format `wiseread:///read/{book_id}` are provided automatically and link directly to the source document in Readwise. Use these URLs exactly as provided - they are valid deep links that allow you to return to the original source material.
 
 <bad-example>
-### [[2025-10-10]] updated note
-**Read**: some articles about AI
-
-**Updated**: AI note. Added some thoughts about economics.
+### Updated note
+- **Read**: some articles about AI
+- **Updated**: AI note. Added some thoughts about economics.
 </bad-example>
+- Why this is bad: no date in header, vague title, no date at bottom
 
 **ALWAYS include these elements in your log entry**:
 - What you read that inspired the changes (with specific titles and authors)
