@@ -25,6 +25,7 @@ interface HighlightWithMeta {
   highlighted_at?: string;
   snooze_count: number;
   book_id: number;
+  unique_url?: string;
 }
 
 export class WebviewManager {
@@ -97,6 +98,10 @@ export class WebviewManager {
             await this.handleArchiveAll();
             break;
           case "openUrl":
+            // Copy URL to clipboard for inspection
+            await vscode.env.clipboard.writeText(message.url);
+            vscode.window.showInformationMessage(`Copied to clipboard: ${message.url}`);
+            // Also open the URL
             await vscode.env.openExternal(vscode.Uri.parse(message.url));
             break;
           case "search":
@@ -142,6 +147,7 @@ export class WebviewManager {
           highlighted_at: highlight.highlightedAt || undefined,
           snooze_count: snoozeCount,
           book_id: highlight.bookId,
+          unique_url: highlight.book?.uniqueUrl || undefined,
         };
       }) as HighlightWithMeta[];
 
@@ -247,9 +253,10 @@ export class WebviewManager {
             const highlightId = String(result.id);
             const snoozeCount = await this.db.getSnoozeCount(highlightId);
 
-            // Get the full highlight from DB to get the book ID
+            // Get the full highlight from DB to get the book ID and unique URL
             const highlightState = await this.db.getHighlightState(highlightId);
             const bookId = highlightState?.bookId || 0;
+            const uniqueUrl = highlightState?.book?.uniqueUrl || undefined;
 
             return {
               id: highlightId,
@@ -259,6 +266,7 @@ export class WebviewManager {
               highlighted_at: undefined, // Not provided in MCP response
               snooze_count: snoozeCount,
               book_id: bookId,
+              unique_url: uniqueUrl,
             };
           })
       );

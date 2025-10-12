@@ -11,6 +11,7 @@ interface HighlightState {
     id: number;
     title: string;
     author: string;
+    uniqueUrl?: string;
   };
 }
 

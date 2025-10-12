@@ -104,7 +104,7 @@
     // Scroll focused into view
     const focusedEl = container.querySelector('.focused');
     if (focusedEl) {
-      focusedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      focusedEl.scrollIntoView({ block: 'nearest', behavior: 'instant' });
     }
   }
 
@@ -268,11 +268,10 @@
         e.preventDefault();
         // Open Readwise source for the focused highlight
         const focusedHighlight = displayHighlights[selectedIndex];
-        if (focusedHighlight && focusedHighlight.book_id) {
-          const readwiseUrl = `wiseread:///read/${focusedHighlight.book_id}`;
+        if (focusedHighlight && focusedHighlight.unique_url) {
           vscode.postMessage({
             type: 'openUrl',
-            url: readwiseUrl
+            url: focusedHighlight.unique_url
           });
         }
         break;
