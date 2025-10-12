@@ -1,11 +1,21 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as fs from "fs";
 import { HighlightDatabase } from "./database";
 import { ReadwiseClient } from "./readwiseClient";
 import type {
   ReadwiseHighlight,
   ReadwiseBookHighlights,
 } from "readwise-reader-api";
+
+const LOG_FILE = '/tmp/readwise-search.log';
+
+function log(...args: any[]) {
+  const timestamp = new Date().toISOString();
+  const message = `[${timestamp}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ')}\n`;
+  fs.appendFileSync(LOG_FILE, message);
+  console.log(...args);
+}
 
 interface HighlightWithMeta {
   id: string;
@@ -88,6 +98,12 @@ export class WebviewManager {
             break;
           case "openUrl":
             await vscode.env.openExternal(vscode.Uri.parse(message.url));
+            break;
+          case "search":
+            await this.handleSearch(message.query);
+            break;
+          case "searchSimilar":
+            await this.handleSearch(message.query);
             break;
         }
       },
@@ -211,6 +227,44 @@ export class WebviewManager {
     await this.refresh();
   }
 
+  private async handleSearch(query: string): Promise<void> {
+    if (!this.panel) {
+      return;
+    }
+
+    try {
+      log('handleSearch called with query:', query);
+      // Use Readwise MCP vector search API
+      const results = await this.readwise.searchHighlights(query);
+
+      log('Search results sample:', results.slice(0, 2));
+
+      const matchingHighlights: HighlightWithMeta[] = results
+        .slice(0, 30)
+        .map((result) => {
+          const snoozeCount = this.db.getSnoozeCount(String(result.id));
+
+          return {
+            id: String(result.id),
+            text: result.attributes.highlight_plaintext,
+            source_title: result.attributes.document_title || "Unknown",
+            source_author: result.attributes.document_author,
+            highlighted_at: undefined, // Not provided in MCP response
+            snooze_count: snoozeCount,
+            book_id: result.id, // Using highlight ID as fallback
+          };
+        });
+
+      this.panel.webview.postMessage({
+        type: "searchResults",
+        highlights: matchingHighlights,
+      });
+    } catch (error) {
+      console.error("Search failed:", error);
+      vscode.window.showErrorMessage(`Search failed: ${error}`);
+    }
+  }
+
   private async useWorldviewCommand(highlightTexts: string): Promise<void> {
     // Need to type /worldview, press Enter, then paste highlights underneath
     const { exec } = require("child_process");
@@ -301,6 +355,9 @@ export class WebviewManager {
     </head>
     <body>
       <div id="app">
+        <div id="search-ui" style="display: none; margin-bottom: 10px;">
+          <input type="text" id="search-input" placeholder="Search highlights... (press Enter)" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
+        </div>
         <div id="highlights-container"></div>
         <div class="actions">
           <button id="snooze-all">Snooze All</button>

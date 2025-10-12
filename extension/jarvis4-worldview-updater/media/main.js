@@ -4,6 +4,8 @@
   let selectedIndex = 0;
   let expandedIds = new Set();
   let checkedIds = new Set();
+  let isSearchMode = false;
+  let searchResults = [];
 
   window.addEventListener('message', event => {
     const message = event.data;
@@ -14,20 +16,35 @@
         selectedIndex = Math.max(0, highlights.length - 1);
       }
       render();
+    } else if (message.type === 'searchResults') {
+      searchResults = message.highlights;
+      isSearchMode = true;
+      render();
     }
   });
 
   function render() {
     const container = document.getElementById('highlights-container');
 
-    if (highlights.length === 0) {
-      container.innerHTML = '<div class="empty-state">No highlights to review</div>';
+    // Show search input if in search mode
+    const searchUI = document.getElementById('search-ui');
+    if (isSearchMode) {
+      searchUI.style.display = 'block';
+    } else {
+      searchUI.style.display = 'none';
+    }
+
+    const displayHighlights = isSearchMode ? searchResults : highlights;
+
+    if (displayHighlights.length === 0) {
+      const emptyMessage = isSearchMode ? 'No search results' : 'No highlights to review';
+      container.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
       return;
     }
 
-    container.innerHTML = highlights.map((h, i) => {
+    container.innerHTML = displayHighlights.map((h, i) => {
       const isFocused = i === selectedIndex;
-      const isExpanded = expandedIds.has(h.id);
+      const isExpanded = expandedIds.has(h.id) || isFocused; // Expand if focused
       const isChecked = checkedIds.has(h.id);
       const source = h.source_author
         ? `${h.source_title} by ${h.source_author}`
@@ -62,9 +79,64 @@
 
   // Keyboard navigation
   document.addEventListener('keydown', e => {
-    if (highlights.length === 0) return;
+    const displayHighlights = isSearchMode ? searchResults : highlights;
+
+    // Handle search input focus
+    const searchInput = document.getElementById('search-input');
+    if (searchInput && document.activeElement === searchInput) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        searchInput.blur();
+        isSearchMode = false;
+        searchResults = [];
+        render();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const query = searchInput.value;
+        if (query) {
+          vscode.postMessage({
+            type: 'search',
+            query: query
+          });
+        }
+      }
+      return;
+    }
+
+    if (displayHighlights.length === 0) return;
 
     switch(e.key) {
+      case '/':
+        e.preventDefault();
+        isSearchMode = true;
+        render();
+        setTimeout(() => {
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) searchInput.focus();
+        }, 0);
+        break;
+      case 'e':
+      case 'E':
+        e.preventDefault();
+        // Get checked highlights or just focused one
+        const highlightsToSearch = checkedIds.size > 0
+          ? displayHighlights.filter(h => checkedIds.has(h.id))
+          : [displayHighlights[selectedIndex]];
+
+        const combinedText = highlightsToSearch.map(h => h.text).join('\n\n');
+        vscode.postMessage({
+          type: 'searchSimilar',
+          query: combinedText
+        });
+        break;
+      case 'Escape':
+        if (isSearchMode) {
+          e.preventDefault();
+          isSearchMode = false;
+          searchResults = [];
+          render();
+        }
+        break;
       case 'ArrowUp':
         e.preventDefault();
         selectedIndex = Math.max(0, selectedIndex - 1);
@@ -72,17 +144,17 @@
         break;
       case 'ArrowDown':
         e.preventDefault();
-        selectedIndex = Math.min(highlights.length - 1, selectedIndex + 1);
+        selectedIndex = Math.min(displayHighlights.length - 1, selectedIndex + 1);
         render();
         break;
       case ' ':
         e.preventDefault();
-        const currentHighlight = highlights[selectedIndex];
+        const currentHighlight = displayHighlights[selectedIndex];
         const currentSource = currentHighlight.source_title;
-        const highlightsFromSource = highlights.filter(h => h.source_title === currentSource);
+        const highlightsFromSource = displayHighlights.filter(h => h.source_title === currentSource);
         if (e.shiftKey) {
           // Shift+Space toggles individual highlight
-          const id = highlights[selectedIndex].id;
+          const id = displayHighlights[selectedIndex].id;
           console.log('Toggling individual highlight:', id);
           if (checkedIds.has(id)) {
             checkedIds.delete(id);
@@ -93,9 +165,9 @@
           }
         } else {
           // Space toggles ALL highlights from the same source
-          const currentHighlight = highlights[selectedIndex];
+          const currentHighlight = displayHighlights[selectedIndex];
           const currentSource = currentHighlight.source_title;
-          const highlightsFromSource = highlights.filter(h => h.source_title === currentSource);
+          const highlightsFromSource = displayHighlights.filter(h => h.source_title === currentSource);
           console.log('Toggling all highlights from source:', currentSource, 'count:', highlightsFromSource.length);
 
           // Check if all highlights from this source are already checked
@@ -122,7 +194,7 @@
         // Integrate all checked highlights (or just focused one if none checked)
         const idsToIntegrate = checkedIds.size > 0
           ? Array.from(checkedIds)
-          : [highlights[selectedIndex].id];
+          : [displayHighlights[selectedIndex].id];
 
         vscode.postMessage({
           type: 'integrate',
@@ -137,7 +209,7 @@
         // Snooze all checked highlights (or just focused one if none checked)
         const idsToSnooze = checkedIds.size > 0
           ? Array.from(checkedIds)
-          : [highlights[selectedIndex].id];
+          : [displayHighlights[selectedIndex].id];
 
         vscode.postMessage({
           type: 'snooze',
@@ -151,7 +223,7 @@
         // Archive all checked highlights (or just focused one if none checked)
         const idsToArchive = checkedIds.size > 0
           ? Array.from(checkedIds)
-          : [highlights[selectedIndex].id];
+          : [displayHighlights[selectedIndex].id];
 
         vscode.postMessage({
           type: 'archive',
@@ -164,7 +236,7 @@
       case 'O':
         e.preventDefault();
         // Open Readwise source for the focused highlight
-        const focusedHighlight = highlights[selectedIndex];
+        const focusedHighlight = displayHighlights[selectedIndex];
         if (focusedHighlight && focusedHighlight.book_id) {
           const readwiseUrl = `wiseread:///read/${focusedHighlight.book_id}`;
           vscode.postMessage({
@@ -173,6 +245,28 @@
           });
         }
         break;
+    }
+  });
+
+  // Click handler for highlights
+  document.addEventListener('click', e => {
+    const highlightEl = e.target.closest('.highlight');
+    if (highlightEl) {
+      const index = parseInt(highlightEl.dataset.index);
+      if (!isNaN(index) && index >= 0 && index < displayHighlights.length) {
+        const id = displayHighlights[index].id;
+
+        // Toggle checkbox
+        if (checkedIds.has(id)) {
+          checkedIds.delete(id);
+          expandedIds.delete(id);
+        } else {
+          checkedIds.add(id);
+          expandedIds.add(id);
+        }
+
+        render();
+      }
     }
   });
 

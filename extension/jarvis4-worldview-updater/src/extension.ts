@@ -33,8 +33,11 @@ export async function activate(context: vscode.ExtensionContext) {
 			});
 		}
 
+		// Get OpenAI API key from environment
+		const openaiKey = process.env.OPENAI_API_KEY;
+
 		// Initialize Readwise client
-		const readwise = new ReadwiseClient(apiToken || '');
+		const readwise = new ReadwiseClient(apiToken || '', openaiKey);
 
 		// Initialize webview manager
 		const webviewManager = new WebviewManager(context, db, readwise);
