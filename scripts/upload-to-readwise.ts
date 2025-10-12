@@ -38,7 +38,7 @@ async function generateThumbnail(entryContent: string): Promise<string> {
     quality: "standard",
   });
 
-  const imageUrl = response.data[0]?.url;
+  const imageUrl = response.data?.[0]?.url;
   if (!imageUrl) {
     throw new Error("No image URL returned from DALL-E");
   }
@@ -113,13 +113,8 @@ async function uploadToReadwise() {
     // Find and delete existing document
     await findAndDeleteExistingDocument();
 
-    // Promote headers for Readwise (### -> ##, ##### -> ###)
-    let processedMarkdown = markdown;
-    processedMarkdown = processedMarkdown.replace(/^##### /gm, "### ");
-    processedMarkdown = processedMarkdown.replace(/^### /gm, "## ");
-
     // Convert markdown to HTML
-    const html = await marked(processedMarkdown);
+    const html = await marked(markdown);
 
     // Upload to Readwise Reader
     const uploadPayload: any = {

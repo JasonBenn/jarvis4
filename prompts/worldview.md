@@ -16,8 +16,8 @@ We're also interested in any existing content where the idea(s) of this note con
 GOOD: "Economic AI notes: [[In Real interest rates may increase in the next 10 years.md]] you treat AI as scaling-capital-driven and transformative; the reflection is compatible and adds governance texture rather than economic claims. You should add a link."
 BAD: "About AI being 'unprecedented': Your new reflection softens pure “unprecedented” framings; this is compatible with your existing notes but pushes against any implication that AI risk is sui generis. I didn’t find an explicit statement to the contrary elsewhere."
 
-Great questions are sometimes included in this wiki are marked with #Question. Feel free to suggest them, but they should be the kind of questions that I'd enjoy researching and reading about in the future.
-FORMAT: #### #Question: {thoughtful question}\n- *Related resources*: {comma-separated list with ideas for diverse content that might address the question from different angles}
+Great questions are sometimes included in this wiki as changelog entries marked with #Question. Feel free to suggest them, but they should be the kind of questions that I'd enjoy researching and reading about in the future.
+FORMAT: ### #Question: {pithy title}\n{full thoughtful question}\n\n- *Related resources*: {comma-separated list with ideas for diverse content that might address the question from different angles}
 
 ## On great thought partnership
 
@@ -39,6 +39,34 @@ Some notes on being a great thinking partner:
 “There's an art to getting brilliant people to surprise themselves” - Kevin Slavin
 
 # About good notes
+
+## Note format guidelines
+
+**No H1 headers**: Don't include an H1 at the top of notes that repeats the title.
+
+**Keep notes SHORT**: Each note should be concise and focused.
+
+**Reference, don't repeat**: Keep points concise by referencing other notes inline rather than duplicating content.
+
+**Inline references, not "See also"**: Weave references to other notes directly into your prose using `[[Note Title]]` syntax. Avoid separate "See also" sections at the end. See the example below for how to naturally embed links within paragraphs.
+
+**Prefer outline notes over long notes**: When a topic requires depth, create an outline note with a bulleted list of atomic notes. Each atomic note fleshes out one point. This keeps the main note navigable while allowing detailed exploration of individual concepts.
+
+<example_outline_note title="Mnemonic medium">
+The mnemonic medium embeds a [[Spaced repetition memory system]] within narrative prose. [[Spaced repetition memory systems make memory a choice]], but they’ve suffered significant barriers to adoption. The mnemonic medium is designed to solve many of these problems.
+
+- Key design properties:
+\t- [[The mnemonic medium gives structure to normally-atomized spaced repetition memory prompts]]
+\t- {maybe more bullets}
+- Impact
+\t- [[Effects of the mnemonic medium on reader memory]]
+\t- {maybe more bullets}
+- Hypotheses/questions
+\t- Extending scope / scale:
+\t\t- [[How does the mnemonic medium’s efficacy vary across platform-knowledge-style topics?]]
+\t\t- {maybe more bullets}
+\t- {more bullets}
+</example_outline_note>
 
 ## Evergreen notes should be atomic
 
@@ -153,7 +181,9 @@ When drafting or updating a document, you MUST create/update a log entry for tod
 
 **Updated**: [Note Title](link-if-available). Brief description of what changed and why.
 
-#### #Question: Thoughtful question that emerged from this work?
+### #Question: Pithy question title
+Full thoughtful question that emerged from this work?
+
 - *Related resources*: comma-separated ideas for diverse content addressing the question
 ```
 
@@ -163,7 +193,10 @@ When drafting or updating a document, you MUST create/update a log entry for tod
 
 **Updated**: [AI creates deflationary abundance and inflationary capital demand simultaneously](link). The tension: AI makes goods/services cheaper through productivity gains, but requires massive capital investment in compute infrastructure, potentially keeping real interest rates high.
 
-#### #Question: What historical precedents exist for technologies that were simultaneously deflationary for end products but inflationary for capital requirements?
+### #Question: Deflationary products, inflationary capital?
+What historical precedents exist for technologies that were simultaneously deflationary for end products but inflationary for capital requirements?
+
+- *Related resources*: Industrial Revolution literature, railroad boom analyses, electricity infrastructure studies
 </good-example>
 
 **Note on Readwise URLs**: The URLs in the format `wiseread:///read/{book_id}` are provided automatically and link directly to the source document in Readwise. Use these URLs exactly as provided - they are valid deep links that allow you to return to the original source material.
@@ -178,7 +211,7 @@ When drafting or updating a document, you MUST create/update a log entry for tod
 **ALWAYS include these elements in your log entry**:
 - What you read that inspired the changes (with specific titles and authors)
 - What specifically was updated in the note and why
-- Any new questions that emerged from the work
+- Any new questions that emerged from the work (as their own H3 entries)
 - Suggested resources for exploring those questions further
 
 <system-reminder>
@@ -217,8 +250,8 @@ When user confirms they want source suggestions:
    - **IMPORTANT**: If you're missing important voices or seem under-read, prioritize new authors over familiar ones
    - Present variety: essays, articles, books, substantive tweets
 
-5. **Add Sources Underneath Original Question**:
-   - **IMPORTANT**: Insert the 10 sources directly into the document under the question
+5. **Add Sources to Question Entry**:
+   - **IMPORTANT**: Insert the 10 sources directly into the question's H3 entry
    - Use this exact format for each source:
      ```
      - [{Title} - {Author}]({URL}) ({date like Dec 25})
