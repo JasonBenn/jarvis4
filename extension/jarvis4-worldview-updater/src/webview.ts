@@ -212,28 +212,28 @@ export class WebviewManager {
   }
 
   private async useWorldviewCommand(highlightTexts: string): Promise<void> {
-    // Assemble the complete string: /worldview command + highlights
-    const fullText = `/worldview\n\n${highlightTexts}`;
-
-    // Use clipboard + paste approach (much simpler and more reliable)
+    // Need to type /worldview, press Enter, then paste highlights underneath
     const { exec } = require("child_process");
     const util = require("util");
     const execPromise = util.promisify(exec);
 
-    // Escape text for AppleScript string
-    const escapedText = fullText
+    // Escape highlight text for AppleScript string
+    const escapedHighlights = highlightTexts
       .replace(/\\/g, "\\\\")
       .replace(/"/g, '\\"')
       .replace(/\n/g, "\\n");
 
     const script = `
-      set the clipboard to "${escapedText}"
+      set the clipboard to "${escapedHighlights}"
       tell application "Cursor"
         activate
         delay 0.2
         tell application "System Events"
           keystroke "i" using {command down}
           delay 0.3
+          keystroke "/worldview"
+          key code 36
+          delay 0.2
           keystroke "v" using {command down}
         end tell
       end tell
