@@ -17,8 +17,17 @@
       }
       render();
     } else if (message.type === 'searchResults') {
-      searchResults = message.highlights;
+      // Sort: checked highlights first, then new search results
+      const newResults = message.highlights;
+      const checkedResults = newResults.filter(h => checkedIds.has(h.id));
+      const uncheckedResults = newResults.filter(h => !checkedIds.has(h.id));
+      searchResults = [...checkedResults, ...uncheckedResults];
+
       isSearchMode = true;
+
+      // Set focus to first unchecked highlight
+      selectedIndex = checkedResults.length;
+
       render();
     }
   });
@@ -153,18 +162,7 @@
         const currentSource = currentHighlight.source_title;
         const highlightsFromSource = displayHighlights.filter(h => h.source_title === currentSource);
         if (e.shiftKey) {
-          // Shift+Space toggles individual highlight
-          const id = displayHighlights[selectedIndex].id;
-          console.log('Toggling individual highlight:', id);
-          if (checkedIds.has(id)) {
-            checkedIds.delete(id);
-            expandedIds.delete(id);
-          } else {
-            checkedIds.add(id);
-            expandedIds.add(id);
-          }
-        } else {
-          // Space toggles ALL highlights from the same source
+          // Shift+Space toggles ALL highlights from the same source
           const currentHighlight = displayHighlights[selectedIndex];
           const currentSource = currentHighlight.source_title;
           const highlightsFromSource = displayHighlights.filter(h => h.source_title === currentSource);
@@ -185,6 +183,17 @@
               checkedIds.add(h.id);
               expandedIds.add(h.id);
             });
+          }
+        } else {
+          // Space toggles individual highlight
+          const id = displayHighlights[selectedIndex].id;
+          console.log('Toggling individual highlight:', id);
+          if (checkedIds.has(id)) {
+            checkedIds.delete(id);
+            expandedIds.delete(id);
+          } else {
+            checkedIds.add(id);
+            expandedIds.add(id);
           }
         }
         render();
