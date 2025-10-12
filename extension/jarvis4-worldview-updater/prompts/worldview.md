@@ -215,8 +215,13 @@ When user confirms they want source suggestions:
    - Present variety: essays, articles, books, substantive tweets
 
 5. **Add Sources Underneath Original Question**:
-   - Present the 10 curated sources as suggestions for the user to explore
-   - Briefly note how these sources might relate to their existing worldview
+   - **IMPORTANT**: Insert the 10 sources directly into the document under the question
+   - Use this exact format for each source:
+     ```
+     - [{Title} - {Author}]({URL}) ({date like Dec 25})
+     	- {one line on thesis, which means <15 words}
+     	- {one line on the author - but only if they're not in the list of trusted authors}
+     ```
    - Continue normal worldview conversation
 
 <good-example>
