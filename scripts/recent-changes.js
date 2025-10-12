@@ -5,6 +5,7 @@ import path from "path";
 import { execSync } from "child_process";
 
 const PUBLISHED_DIR = "/Users/jasonbenn/notes/Neighborhood Notes/Published";
+const PRIVATE_DIR = "/Users/jasonbenn/notes/Neighborhood Notes/Private";
 const OUTPUT_FILE = path.join(PUBLISHED_DIR, "Recent changes.md");
 
 // Parse a date from [[YYYY-MM-DD]] format
@@ -56,26 +57,35 @@ function extractLogEntries(filePath, fileName) {
   return entries;
 }
 
-function main() {
+// Process all markdown files in a directory
+function processDirectory(directory, fileFilter = (f) => f.endsWith(".md")) {
   const allEntries = [];
+  const files = fs.readdirSync(directory).filter(fileFilter);
 
-  const files = fs
-    .readdirSync(PUBLISHED_DIR)
-    .filter((f) => f.endsWith(".md") && f !== "Recent changes.md");
-
-  // Extract log entries from each file
   for (const file of files) {
-    const filePath = path.join(PUBLISHED_DIR, file);
+    const filePath = path.join(directory, file);
     const entries = extractLogEntries(filePath, file);
     allEntries.push(...entries);
   }
+
+  return allEntries;
+}
+
+function main() {
+  // Extract log entries from published and private notes
+  const allEntries = [
+    ...processDirectory(
+      PUBLISHED_DIR,
+      (f) => f.endsWith(".md") && f !== "Recent changes.md"
+    ),
+    ...processDirectory(PRIVATE_DIR),
+  ];
 
   // Sort entries by date (newest first)
   allEntries.sort((a, b) => b.date - a.date);
 
   // Generate output
   const output = [];
-  output.push("# Recent Changes\n");
 
   for (const entry of allEntries) {
     output.push(entry.header);
@@ -93,7 +103,10 @@ function main() {
     execSync(`git add "${OUTPUT_FILE}"`, { cwd: path.dirname(PUBLISHED_DIR) });
     console.log(`✓ Added ${path.basename(OUTPUT_FILE)} to git staging`);
   } catch (error) {
-    console.error(`⚠ Failed to add ${path.basename(OUTPUT_FILE)} to git:`, error.message);
+    console.error(
+      `⚠ Failed to add ${path.basename(OUTPUT_FILE)} to git:`,
+      error.message
+    );
   }
 }
 
