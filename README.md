@@ -1,75 +1,101 @@
 # Jarvis4
 
-Worldview integration system for Readwise highlights with Cursor.
+I'm frustrated that I can read something profound and then forget 95% of it within a month.
+
+This project is a Cursor plugin that allows me to view and select my Readwise highlights, and then collaborate with AI to integrate them into a wiki of the ways I've changed my mind recently.
+
+This process often surfaces great questions. Jarvis will also take my great questions and find 10 high quality links for to read to dive into that question more deeply. Then these are all compiled into a [changelog](https://neighborhoodsf.com/Neighborhood+Notes/Published/Recent+changes), uploaded into Readwise, and pinned to the top of my Readwise home screen.
+
+My overall flow is to open Readwise when I want to read in the evenings, read my changelog and dive deep into the questions I'm most curious about, and make highlights and notes. Then I sleep on it. In the morning, if I'm feeling inspired, I'll open Jarvis for some morning pages, select highlights on topics I'm thinking about, maybe press E to search for more relevant highlights along those lines, push ENTER to compile them into a prompt for Cursor Compose, and then collaboratively update my wiki with Cursor. Usually that'll surface more questions, which I'll note down. When I commit my changes, the questions are automatically fleshed out with excellent relevant resources, compiled into a changelog, and uploaded into my Readwise, closing the loop.
 
 ## Components
 
-### 1. VS Code Extension (Jarvis4 Worldview Updater)
+### VS Code Extension
+
 Browse and integrate Readwise highlights directly in Cursor.
 
 **Location**: `extension/jarvis4-worldview-updater/`
 
-**Install**:
-```bash
-cd extension/jarvis4-worldview-updater
-pnpm run reinstall
-```
-
-**Database**: SQLite at `~/Library/Application Support/Cursor/User/globalStorage/jasonbenn.jarvis4-worldview-updater/readwise-highlights.db`
+**Features**:
+- Fetch highlights from Readwise API
+- Keyboard-driven navigation (↑/↓, SPACE, ENTER, S, BACKSPACE)
+- Multi-select and bulk operations
+- Snooze highlights (reappear after 4 weeks)
+- Archive unwanted highlights
+- Semantic search with `/` or `E` keys
+- Two-pane layout with infinite scroll
+- Grouped list view by book
 
 **Commands**:
 - `Readwise: Fetch and Show Highlights` - Fetch new highlights and show panel
-- `Readwise: Show Highlights Panel` - Show existing highlights
 
-**Database Utilities**:
+
+### Automated Changelog System
+
+Tracks wiki changes and compiles them into a changelog with AI-generated summaries and curated reading lists.
+
+**Location**: `scripts/recent-changes.ts`
+
+**Behavior**:
+1. Scans git diff for changed markdown files
+2. Adds `## Changelog` sections with dated entries
+3. Compiles changelog entries into `Recent changes.md`
+4. Extracts questions from changelog entries
+5. For each question, finds 10 high-quality links using AI
+6. Uploads changelog to Readwise (pinned to home screen)
+
+**Run**:
 ```bash
-# Open SQLite CLI
-pnpm run ext:db
-
-# View metadata (last fetch time, etc)
-pnpm run ext:db:metadata
-
-# View statistics
-pnpm run ext:db:stats
+pnpm run recent-changes
 ```
 
-### 2. Markdown Uploader
-Upload markdown files to Readwise with AI-generated images.
-
-**Setup**:
-```bash
-pnpm install
-pnpm run db:init  # Initialize image tracking database
-```
-
-**Commands**:
-
-**worldview-upload** - Upload markdown files to Readwise from any directory:
-```bash
-worldview-upload
-```
-
-**worldview-update** - Open Cursor Compose with Neighborhood Notes and worldview-update prompt:
-```bash
-worldview-update
-```
-
-**Database** (Prisma - for image tracking):
-```bash
-pnpm run db:studio  # Open Prisma Studio
-```
+**Pre-commit Hook**: Automatically runs on commit to update changelog
 
 ## Installation
 
 ### Prerequisites
 - Cursor CLI installed (should be available as `cursor` command)
 - Node.js and pnpm
+- Readwise API token
 
 ### Setup
-```bash
-pnpm install
-pnpm run install-alias
-source ~/.bash_profile
-```
 
-**Note:** Scripts use AppleScript for UI automation, so timing may need adjustment based on your system.
+1. **Install dependencies**:
+   ```bash
+   pnpm install
+   ```
+
+2. **Initialize databases**:
+   ```bash
+   pnpm run db:init  # Initialize image tracking database
+   ```
+
+3. **Install command aliases**:
+   ```bash
+   pnpm run install-alias
+   source ~/.bash_profile
+   ```
+
+4. **Install VS Code extension**:
+   ```bash
+   cd extension/jarvis4-worldview-updater
+   pnpm run reinstall
+   ```
+
+5. **Start backend service** (macOS):
+   ```bash
+   pnpm backend:load    # Load launchd service (auto-start on login)
+   pnpm backend:start   # Start service now
+   ```
+
+6. **Configure Readwise API token**:
+   - Open Cursor settings
+   - Search for "readwise.apiToken"
+   - Paste your token from https://readwise.io/access_token
+
+## Development
+
+### Debug VS Code extension
+1. Open `extension/jarvis4-worldview-updater` in Cursor and make changes
+2. Run `pnpm reinstall`
+3. In another Cursor window, run `Reload Window` from the command palette and then `Readwise: Fetch and Show Highlights`
