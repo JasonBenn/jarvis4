@@ -25,7 +25,7 @@
     "cursor-worldview:link": "ln -sf \"$HOME/code/jarvis4/prompts/worldview.md\" \"$HOME/.cursor/commands/worldview.md\" && echo '✅ Cursor worldview prompt symlinked!'",
     "open-worldview:run": "bash scripts/open-worldview.sh",
     "open-worldview:link": "ln -sf \"$HOME/code/jarvis4/scripts/open-worldview.sh\" \"$HOME/raycast-scripts/jarvis-worldview.sh\" && echo '✅ Raycast script symlinked!'",
-    "recent-changes": "node scripts/recent-changes.js",
+    "recent-changes": "tsx scripts/recent-changes.ts",
     "upload": "tsx scripts/upload-to-readwise.ts",
     "sync:all": "tsx scripts/sync-all-highlights.ts",
     "update:integrated": "tsx scripts/update_integrated.ts",
