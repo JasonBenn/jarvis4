@@ -4,11 +4,12 @@
 
 set -e  # Exit on error
 
+cd "$HOME/code/jarvis4"
+
 echo "🔄 Generating Recent changes.md..."
-node "$HOME/code/jarvis4/scripts/recent-changes.js"
+pnpm tsx scripts/recent-changes.ts
 
 echo "📤 Uploading to Readwise..."
-cd "$HOME/code/jarvis4"
 pnpm upload
 
 echo "✅ Pre-commit hook complete!"
