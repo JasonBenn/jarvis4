@@ -21,6 +21,14 @@ I use it for intellectual topics, of course:
 But I also use it to reflect on living my best life:
 <img width="1728" height="1117" alt="Screenshot 2025-10-13 at 11 03 56 AM" src="https://github.com/user-attachments/assets/e07fff75-2913-4efb-9c91-c1493248893a" />
 
+After I update my wiki, Jarvis finds resources to go deeper on the interesting questions and uploads it to my Readwise. Here's what my reading tablet looks like when I pick it up at night:
+<img width="1727" height="592" alt="image" src="https://github.com/user-attachments/assets/f35efc87-6055-4509-9b71-ce1dc99ce937" />
+
+And here's what that doc looks like:
+<img width="1727" height="783" alt="image" src="https://github.com/user-attachments/assets/379279b7-3068-48f8-b019-279342f62f20" />
+
+With this loop my attention is deep and proactive instead of broad and reactive.
+
 ## Components
 
 ### VS Code Extension
