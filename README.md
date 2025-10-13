@@ -1,12 +1,18 @@
-# Jarvis4
+# Jarvis: collaboratively updating your worldview to integrate what you read
 
 I'm frustrated that I can read something profound and then forget 95% of it within a month.
 
-This project is a Cursor plugin that allows me to view and select my Readwise highlights, and then collaborate with AI to integrate them into a wiki of the ways I've changed my mind recently.
+This project is a Cursor plugin that allows me to view and select my Readwise highlights, and then collaborate with AI to integrate them into a [wiki of the ways I've changed my mind recently](https://neighborhoodsf.com/Neighborhood+Notes/Published/Recent+changes)).
 
 This process often surfaces great questions. Jarvis will also take my great questions and find 10 high quality links for to read to dive into that question more deeply. Then these are all compiled into a [changelog](https://neighborhoodsf.com/Neighborhood+Notes/Published/Recent+changes), uploaded into Readwise, and pinned to the top of my Readwise home screen.
 
 My overall flow is to open Readwise when I want to read in the evenings, read my changelog and dive deep into the questions I'm most curious about, and make highlights and notes. Then I sleep on it. In the morning, if I'm feeling inspired, I'll open Jarvis for some morning pages, select highlights on topics I'm thinking about, maybe press E to search for more relevant highlights along those lines, push ENTER to compile them into a prompt for Cursor Compose, and then collaboratively update my wiki with Cursor. Usually that'll surface more questions, which I'll note down. When I commit my changes, the questions are automatically fleshed out with excellent relevant resources, compiled into a changelog, and uploaded into my Readwise, closing the loop.
+
+I use it for intellectual topics, of course:
+<img width="1728" height="1117" alt="Screenshot 2025-10-13 at 11 14 21 AM" src="https://github.com/user-attachments/assets/e28a409b-6995-4f81-97d4-1b9533a9c704" />
+
+But I also use it to reflect on living my best life:
+<img width="1728" height="1117" alt="Screenshot 2025-10-13 at 11 03 56 AM" src="https://github.com/user-attachments/assets/e07fff75-2913-4efb-9c91-c1493248893a" />
 
 ## Components
 
