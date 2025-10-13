@@ -2,7 +2,15 @@ import { FastifyInstance } from 'fastify';
 import * as highlightService from '../services/highlightService.js';
 
 export async function highlightRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { limit?: string; offset?: string } }>('/highlights', async (request, reply) => {
+  fastify.get<{ Querystring: { limit?: string; offset?: string; book_id?: string } }>('/highlights', async (request, reply) => {
+    // If book_id is provided, get all highlights for that book
+    if (request.query.book_id) {
+      const bookId = parseInt(request.query.book_id, 10);
+      const highlights = await highlightService.getHighlightsByBookId(bookId);
+      return { highlights };
+    }
+
+    // Otherwise get visible highlights with pagination
     const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined;
     const offset = request.query.offset ? parseInt(request.query.offset, 10) : undefined;
     const highlights = await highlightService.getVisibleHighlights(limit, offset);

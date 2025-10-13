@@ -15,20 +15,21 @@ function parseLogDate(dateStr) {
 }
 
 // Transform header for Readwise-optimized format
-function transformHeaderForReadwise(header) {
+function transformHeaderForReadwise(header, sourceFile) {
   // Step 1: Extract date from headers and move it below
   const dateMatch = header.match(/\[\[(\d{4}-\d{2}-\d{2})\]\]/);
   let transformed = header.replace(/^### \[\[(\d{4}-\d{2}-\d{2})\]\] /, "### ");
 
   // Step 2: Remove #Question tag from anywhere in headers
-  transformed = transformed.replace(/#Question:?/, "").replace(/\s+/g, " ");
+  transformed = transformed.replace(/#Question:?/, "").replace(/\s+/g, " ").trim();
 
-  // Step 3: Add date below the header
+  // Step 3: Add date and source file link on a new line below the header
+  let metadata = "";
   if (dateMatch) {
-    transformed += ` [[${dateMatch[1]}]]`;
+    metadata = `*[[${dateMatch[1]}]] - [[${sourceFile}]]*`;
   }
 
-  return transformed;
+  return { header: transformed, metadata };
 }
 
 // Extract log entries from a single file
@@ -106,8 +107,11 @@ function main() {
 
   for (const entry of allEntries) {
     // Transform header to Readwise-optimized format
-    const transformedHeader = transformHeaderForReadwise(entry.header);
-    output.push(transformedHeader);
+    const { header, metadata } = transformHeaderForReadwise(entry.header, entry.sourceFile);
+    output.push(header);
+    if (metadata) {
+      output.push(metadata);
+    }
     output.push(entry.body.join("\n"));
     output.push(""); // blank line between entries
   }

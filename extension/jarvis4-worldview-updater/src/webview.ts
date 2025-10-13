@@ -121,6 +121,9 @@ export class WebviewManager {
           case "loadMore":
             await this.handleLoadMore();
             break;
+          case "fetchBookHighlights":
+            await this.handleFetchBookHighlights(message.bookId);
+            break;
         }
       },
       undefined,
@@ -199,7 +202,7 @@ export class WebviewManager {
           ? `${highlight.book.title} by ${highlight.book.author}`
           : highlight.book.title;
         const url = highlight.url;
-        return `<highlight>\n${highlight.text}\n— ${source}\n— ${url}\n</highlight>`;
+        return `<highlight url="${url}">\n${highlight.text}\n— ${source}\n</highlight>`;
       })
     );
 
@@ -331,6 +334,49 @@ export class WebviewManager {
     } catch (error) {
       console.error("Search failed:", error);
       vscode.window.showErrorMessage(`Search failed: ${error}`);
+    }
+  }
+
+  private async handleFetchBookHighlights(bookId: number): Promise<void> {
+    if (!this.panel) {
+      return;
+    }
+
+    try {
+      log("handleFetchBookHighlights called with bookId:", bookId);
+
+      // Fetch all highlights for this book from database
+      const bookHighlights = await this.db.getHighlightsByBookId(bookId);
+
+      log("Book highlights count:", bookHighlights.length);
+
+      // Transform to display format
+      const highlightsToShow: HighlightWithMeta[] = bookHighlights.map(
+        (highlight: any) => {
+          const snoozeCount = highlight.snoozeHistory
+            ? JSON.parse(highlight.snoozeHistory).length
+            : 0;
+
+          return {
+            id: highlight.id,
+            text: highlight.text || "",
+            source_title: highlight.book?.title || "Unknown",
+            source_author: highlight.book?.author || undefined,
+            highlighted_at: highlight.highlightedAt || undefined,
+            snooze_count: snoozeCount,
+            book_id: highlight.bookId,
+            unique_url: highlight.book?.uniqueUrl || undefined,
+          };
+        }
+      ) as HighlightWithMeta[];
+
+      this.panel.webview.postMessage({
+        type: "bookHighlights",
+        highlights: highlightsToShow,
+      });
+    } catch (error) {
+      console.error("Fetch book highlights failed:", error);
+      vscode.window.showErrorMessage(`Fetch book highlights failed: ${error}`);
     }
   }
 

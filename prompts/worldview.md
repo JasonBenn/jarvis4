@@ -156,8 +156,12 @@ Maintaining already-written notes in an outline is comparatively easy: just look
 Furthermore, to start a writing project with a blank outline, we need to have a topic and some angle in mind. We can [[Use notes to avoid preconceived conclusions]].
 
 Also, quotes should use > for multiline and " for one-line.
-- Quotes should be cited. Use the `[^1]` syntax. At the end: `[^1]: Author Name, [Page Title](URL), Year Published`.
-- IMPORTANT: do not make up URLs. When highlight URLs are provided, you MUST extract and use the url exactly as provided in your citations.
+
+**CRITICAL CITATION REQUIREMENT**:
+- **EVERY quotation MUST be cited** using the `[^1]` syntax. This is how we track which highlights to mark as INTEGRATED.
+- Citation format: `[^1]: Author Name, [Page Title](URL), Year Published`
+- **IMPORTANT**: Do not make up URLs. When highlight URLs are provided in the XML `url` attribute, you MUST extract and use the URL exactly as provided in your citations.
+- **Link each URL only once per note**: The first time you reference content from a source, cite it with the URL. Subsequent references to the same source don't need the URL again - just cite with the footnote number.
 
 ## Document Format
 

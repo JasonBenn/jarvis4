@@ -133,6 +133,21 @@ export class HighlightDatabase {
     }
   }
 
+  async getHighlightsByBookId(bookId: number): Promise<any[]> {
+    try {
+      const url = `${this.baseUrl}/highlights?book_id=${bookId}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch highlights by book: ${response.statusText}`);
+      }
+      const data = await response.json() as { highlights: any[] };
+      return data.highlights;
+    } catch (error) {
+      console.error('Error fetching highlights by book:', error);
+      return [];
+    }
+  }
+
 
   // Metadata operations
   async getLastReadwiseFetch(): Promise<string | null> {

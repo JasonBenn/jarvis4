@@ -148,3 +148,17 @@ export async function snoozeHighlight(id: string, durationWeeks: number) {
     },
   });
 }
+
+export async function getHighlightsByBookId(bookId: number) {
+  return prisma.highlight.findMany({
+    where: {
+      bookId,
+    },
+    include: {
+      book: true,
+    },
+    orderBy: {
+      highlightedAt: 'desc',
+    },
+  });
+}
