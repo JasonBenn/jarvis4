@@ -6,3 +6,4 @@ logs
 /src/generated/prisma
 db.sqlite
 db.sqlite-journal
+prompts/journal.md
