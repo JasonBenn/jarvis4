@@ -30,6 +30,10 @@ interface GroupedEntry {
   updated: Array<{ file: string; phrase: string }>;
 }
 
+interface TitleCache {
+  [bodyKey: string]: string;
+}
+
 // Get today's date in YYYY-MM-DD format
 function getTodayDate(): string {
   return new Date().toISOString().split("T")[0];
@@ -377,8 +381,79 @@ function getFileDiff(fileName: string): string {
   }
 }
 
-// Generate a pithy title for grouped entries using AI
-async function generateGroupTitle(group: GroupedEntry): Promise<string> {
+// Create a cache key from group body
+function createCacheKey(group: GroupedEntry): string {
+  const items = [
+    ...group.created.map(({ file, phrase }) => `Created [[${file}]]: ${phrase}`),
+    ...group.updated.map(({ file, phrase }) => `Updated [[${file}]]: ${phrase}`),
+  ];
+  return items.sort().join("\n");
+}
+
+// Parse existing Recent changes.md to extract title cache
+function parseTitleCache(): TitleCache {
+  const cache: TitleCache = {};
+
+  if (!fs.existsSync(OUTPUT_FILE)) {
+    return cache;
+  }
+
+  const content = fs.readFileSync(OUTPUT_FILE, "utf-8");
+  const lines = content.split("\n");
+
+  let inChangesEntry = false;
+  let currentTitle: string | null = null;
+  let currentBody: string[] = [];
+
+  for (const line of lines) {
+    // Match "### Changes: {title}"
+    const changesMatch = line.match(/^### Changes: (.+)$/);
+    if (changesMatch) {
+      // Save previous entry
+      if (currentTitle && currentBody.length > 0) {
+        cache[currentBody.join("\n")] = currentTitle;
+      }
+
+      // Start new entry
+      currentTitle = changesMatch[1];
+      currentBody = [];
+      inChangesEntry = true;
+      continue;
+    }
+
+    // If we hit another H3 header, stop collecting body
+    if (line.match(/^###\s/)) {
+      if (currentTitle && currentBody.length > 0) {
+        cache[currentBody.join("\n")] = currentTitle;
+      }
+      inChangesEntry = false;
+      currentTitle = null;
+      currentBody = [];
+      continue;
+    }
+
+    // Collect body lines (Created/Updated items)
+    if (inChangesEntry && line.match(/^- (Created|Updated) \[\[/)) {
+      currentBody.push(line.replace(/^- /, ""));
+    }
+  }
+
+  // Save last entry
+  if (currentTitle && currentBody.length > 0) {
+    cache[currentBody.join("\n")] = currentTitle;
+  }
+
+  return cache;
+}
+
+// Generate a pithy title for grouped entries using AI (with cache)
+async function generateGroupTitle(group: GroupedEntry, cache: TitleCache): Promise<string> {
+  // Check cache first
+  const cacheKey = createCacheKey(group);
+  if (cache[cacheKey]) {
+    return cache[cacheKey];
+  }
+
   // Instead of full diffs, use the pithy phrases we already generated
   const phrases = [...group.created, ...group.updated].map(({ phrase }) => phrase);
 
@@ -427,7 +502,10 @@ async function main() {
 
   console.log("\n=== Compiling Recent Changes ===\n");
 
-  // Step 2: Extract log entries from published and private notes
+  // Step 2: Load title cache from existing Recent changes.md
+  const titleCache = parseTitleCache();
+
+  // Step 3: Extract log entries from published and private notes
   const allEntries = [
     ...processDirectory(
       PUBLISHED_DIR,
@@ -474,7 +552,7 @@ async function main() {
       }
       output.push(body.join("\n"));
     } else {
-      const title = await generateGroupTitle(item.group);
+      const title = await generateGroupTitle(item.group, titleCache);
       output.push(`### Changes: ${title}`);
       output.push(`*[[${item.group.date}]]*`);
 
