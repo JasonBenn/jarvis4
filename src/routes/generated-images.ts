@@ -7,6 +7,10 @@ export async function generatedImageRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const image = await imageService.getImageByHash(request.params.entryHash);
       if (!image) {
+        request.log.warn({
+          type: 'image_not_found',
+          entryHash: request.params.entryHash,
+        }, `Image not found: ${request.params.entryHash}`);
         return reply.code(404).send({ error: 'Image not found' });
       }
       return image;

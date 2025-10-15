@@ -10,6 +10,16 @@ export interface GeneratedImage {
   createdAt: string;
 }
 
+// Client-side logger (simple console wrapper with structured format)
+const clientLogger = {
+  error: (context: Record<string, any>, message: string) => {
+    console.error(`[ERROR] ${message}`, context);
+  },
+  info: (context: Record<string, any>, message: string) => {
+    console.log(`[INFO] ${message}`, context);
+  },
+};
+
 export const generatedImages = {
   async findByEntryHash(entryHash: string): Promise<GeneratedImage | undefined> {
     try {
@@ -22,7 +32,17 @@ export const generatedImages = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Error fetching image:', error);
+      clientLogger.error(
+        {
+          type: 'image_fetch_error',
+          entryHash,
+          error: {
+            name: (error as Error).name,
+            message: (error as Error).message,
+          },
+        },
+        `Error fetching image ${entryHash}: ${(error as Error).message}`
+      );
       return undefined;
     }
   },
@@ -37,9 +57,29 @@ export const generatedImages = {
       if (!response.ok) {
         throw new Error(`Failed to create image: ${response.statusText}`);
       }
-      return await response.json();
+      const result = await response.json();
+      clientLogger.info(
+        {
+          type: 'image_created',
+          entryHash,
+          imageUrl,
+        },
+        `Created image for entry ${entryHash}`
+      );
+      return result;
     } catch (error) {
-      console.error('Error creating image:', error);
+      clientLogger.error(
+        {
+          type: 'image_create_error',
+          entryHash,
+          imageUrl,
+          error: {
+            name: (error as Error).name,
+            message: (error as Error).message,
+          },
+        },
+        `Error creating image for ${entryHash}: ${(error as Error).message}`
+      );
       throw error;
     }
   },
@@ -54,8 +94,27 @@ export const generatedImages = {
       if (!response.ok) {
         throw new Error(`Failed to update document ID: ${response.statusText}`);
       }
+      clientLogger.info(
+        {
+          type: 'image_document_updated',
+          entryHash,
+          documentId,
+        },
+        `Updated document ID for image ${entryHash}`
+      );
     } catch (error) {
-      console.error('Error updating document ID:', error);
+      clientLogger.error(
+        {
+          type: 'image_update_error',
+          entryHash,
+          documentId,
+          error: {
+            name: (error as Error).name,
+            message: (error as Error).message,
+          },
+        },
+        `Error updating document ID for ${entryHash}: ${(error as Error).message}`
+      );
       throw error;
     }
   },

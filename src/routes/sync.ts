@@ -12,6 +12,12 @@ export async function syncRoutes(fastify: FastifyInstance) {
   }>('/sync', async (request, reply) => {
     const { books, highlights } = request.body;
 
+    request.log.info({
+      type: 'sync_start',
+      booksCount: books.length,
+      highlightsCount: highlights.length,
+    }, `Starting sync: ${books.length} books, ${highlights.length} highlights`);
+
     try {
       // Upsert books first
       for (const bookData of books) {
@@ -23,6 +29,12 @@ export async function syncRoutes(fastify: FastifyInstance) {
         await highlightService.upsertHighlight(highlightData);
       }
 
+      request.log.info({
+        type: 'sync_complete',
+        booksCount: books.length,
+        highlightsCount: highlights.length,
+      }, `Sync complete: ${books.length} books, ${highlights.length} highlights`);
+
       return {
         success: true,
         synced: {
@@ -31,7 +43,16 @@ export async function syncRoutes(fastify: FastifyInstance) {
         },
       };
     } catch (error) {
-      fastify.log.error(error);
+      request.log.error({
+        type: 'sync_error',
+        booksCount: books.length,
+        highlightsCount: highlights.length,
+        error: {
+          name: (error as Error).name,
+          message: (error as Error).message,
+          stack: (error as Error).stack,
+        },
+      }, `Sync failed: ${(error as Error).message}`);
       return reply.code(500).send({ error: 'Sync failed' });
     }
   });

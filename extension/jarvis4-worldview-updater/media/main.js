@@ -589,11 +589,14 @@
     'o': (e, displayHighlights) => {
       e.preventDefault();
       const focusedHighlight = displayHighlights.find(h => h.id === selectedId);
-      if (focusedHighlight && focusedHighlight.unique_url) {
-        vscode.postMessage({
-          type: 'openUrl',
-          url: focusedHighlight.unique_url
-        });
+      if (focusedHighlight) {
+        const url = focusedHighlight.url || focusedHighlight.readwise_url;
+        if (url) {
+          vscode.postMessage({
+            type: 'openUrl',
+            url: url
+          });
+        }
       }
     }
   };

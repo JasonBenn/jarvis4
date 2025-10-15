@@ -5,6 +5,10 @@ export async function metadataRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { key: string } }>('/metadata/:key', async (request, reply) => {
     const value = await metadataService.getMetadata(request.params.key);
     if (value === undefined) {
+      request.log.warn({
+        type: 'metadata_not_found',
+        key: request.params.key,
+      }, `Metadata key not found: ${request.params.key}`);
       return reply.code(404).send({ error: 'Metadata key not found' });
     }
     return { key: request.params.key, value };

@@ -20,6 +20,10 @@ export async function highlightRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/highlights/:id', async (request, reply) => {
     const highlight = await highlightService.getHighlightWithBook(request.params.id);
     if (!highlight) {
+      request.log.warn({
+        type: 'highlight_not_found',
+        highlightId: request.params.id,
+      }, `Highlight not found: ${request.params.id}`);
       return reply.code(404).send({ error: 'Highlight not found' });
     }
     return highlight;
@@ -50,8 +54,23 @@ export async function highlightRoutes(fastify: FastifyInstance) {
         request.params.id,
         request.body.durationWeeks
       );
+      request.log.info({
+        type: 'highlight_snoozed',
+        highlightId: request.params.id,
+        durationWeeks: request.body.durationWeeks,
+      }, `Snoozed highlight ${request.params.id} for ${request.body.durationWeeks} weeks`);
       return { success: true };
     } catch (error) {
+      request.log.error({
+        type: 'highlight_snooze_error',
+        highlightId: request.params.id,
+        durationWeeks: request.body.durationWeeks,
+        error: {
+          name: (error as Error).name,
+          message: (error as Error).message,
+          stack: (error as Error).stack,
+        },
+      }, `Failed to snooze highlight ${request.params.id}: ${(error as Error).message}`);
       return reply.code(404).send({ error: (error as Error).message });
     }
   });

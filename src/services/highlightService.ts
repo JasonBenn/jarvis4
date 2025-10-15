@@ -1,4 +1,5 @@
 import { prisma } from '../db/client.js';
+import { logger } from '../utils/logger.js';
 
 export interface HighlightData {
   id: number;
@@ -43,41 +44,63 @@ export async function getVisibleHighlights(limit?: number, offset?: number) {
 
 export async function upsertHighlight(highlightData: HighlightData) {
   const id = String(highlightData.id);
-  const existing = await prisma.highlight.findUnique({ where: { id } });
 
-  const data = {
-    text: highlightData.text,
-    location: highlightData.location,
-    locationType: highlightData.location_type,
-    note: highlightData.note || '',
-    color: highlightData.color || '',
-    highlightedAt: highlightData.highlighted_at || '',
-    createdAt: highlightData.created_at,
-    updatedAt: highlightData.updated_at,
-    externalId: highlightData.external_id,
-    endLocation: highlightData.end_location,
-    url: highlightData.url,
-    tags: JSON.stringify(highlightData.tags),
-    isFavorite: highlightData.is_favorite,
-    isDiscard: highlightData.is_discard,
-    readwiseUrl: highlightData.readwise_url,
-    bookId: highlightData.book_id,
-    // Only set these on creation
-    ...(!existing && {
-      firstSeen: new Date(),
-      lastUpdated: new Date(),
-    }),
-  };
+  try {
+    const existing = await prisma.highlight.findUnique({ where: { id } });
 
-  return prisma.highlight.upsert({
-    where: { id },
-    update: data,
-    create: {
-      id,
-      ...data,
-      status: 'NEW',
-    },
-  });
+    const data = {
+      text: highlightData.text,
+      location: highlightData.location,
+      locationType: highlightData.location_type,
+      note: highlightData.note || '',
+      color: highlightData.color || '',
+      highlightedAt: highlightData.highlighted_at || '',
+      createdAt: highlightData.created_at,
+      updatedAt: highlightData.updated_at,
+      externalId: highlightData.external_id,
+      endLocation: highlightData.end_location,
+      url: highlightData.url,
+      tags: JSON.stringify(highlightData.tags),
+      isFavorite: highlightData.is_favorite,
+      isDiscard: highlightData.is_discard,
+      readwiseUrl: highlightData.readwise_url,
+      bookId: highlightData.book_id,
+      // Only set these on creation
+      ...(!existing && {
+        firstSeen: new Date(),
+        lastUpdated: new Date(),
+      }),
+    };
+
+    const result = await prisma.highlight.upsert({
+      where: { id },
+      update: data,
+      create: {
+        id,
+        ...data,
+        status: 'NEW',
+      },
+    });
+
+    logger.debug({
+      type: 'highlight_upserted',
+      highlightId: id,
+      isNew: !existing,
+    }, `${existing ? 'Updated' : 'Created'} highlight ${id}`);
+
+    return result;
+  } catch (error) {
+    logger.error({
+      type: 'highlight_upsert_error',
+      highlightId: id,
+      error: {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      },
+    }, `Failed to upsert highlight ${id}: ${(error as Error).message}`);
+    throw error;
+  }
 }
 
 export async function getHighlight(id: string) {

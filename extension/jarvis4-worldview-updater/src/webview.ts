@@ -29,7 +29,8 @@ interface HighlightWithMeta {
   highlighted_at?: string;
   snooze_count: number;
   book_id: number;
-  unique_url?: string;
+  url?: string;
+  readwise_url?: string;
 }
 
 export class WebviewManager {
@@ -166,7 +167,8 @@ export class WebviewManager {
           highlighted_at: highlight.highlightedAt || undefined,
           snooze_count: snoozeCount,
           book_id: highlight.bookId,
-          unique_url: highlight.book?.uniqueUrl || undefined,
+          url: highlight.url || undefined,
+          readwise_url: highlight.readwiseUrl || undefined,
         };
       }
     ) as HighlightWithMeta[];
@@ -278,7 +280,8 @@ export class WebviewManager {
           highlighted_at: highlight.highlightedAt || undefined,
           snooze_count: snoozeCount,
           book_id: highlight.bookId,
-          unique_url: highlight.book?.uniqueUrl || undefined,
+          url: highlight.url || undefined,
+          readwise_url: highlight.readwiseUrl || undefined,
         };
       }
     ) as HighlightWithMeta[];
@@ -304,28 +307,20 @@ export class WebviewManager {
 
       log("Search results sample:", results.slice(0, 2));
 
-      const matchingHighlights: HighlightWithMeta[] = await Promise.all(
-        results.slice(0, 30).map(async (result) => {
-          const highlightId = String(result.id);
-          const snoozeCount = await this.db.getSnoozeCount(highlightId);
-
-          // Get the full highlight from DB to get the book ID and unique URL
-          const highlightState = await this.db.getHighlightState(highlightId);
-          const bookId = highlightState?.bookId || 0;
-          const uniqueUrl = highlightState?.book?.uniqueUrl || undefined;
-
-          return {
-            id: highlightId,
-            text: result.attributes.highlight_plaintext,
-            source_title: result.attributes.document_title || "Unknown",
-            source_author: result.attributes.document_author,
-            highlighted_at: undefined, // Not provided in MCP response
-            snooze_count: snoozeCount,
-            book_id: bookId,
-            unique_url: uniqueUrl,
-          };
-        })
-      );
+      // No need to fetch from DB - MCP results have everything we need
+      const matchingHighlights: HighlightWithMeta[] = results.slice(0, 30).map((result) => {
+        return {
+          id: String(result.id),
+          text: result.attributes.highlight_plaintext,
+          source_title: result.attributes.document_title || "Unknown",
+          source_author: result.attributes.document_author,
+          highlighted_at: undefined, // Not provided in MCP response
+          snooze_count: 0, // Not available from search, not needed for display
+          book_id: 0, // Not needed
+          url: undefined, // Not available from MCP search
+          readwise_url: undefined, // Not available from MCP search
+        };
+      });
 
       this.panel.webview.postMessage({
         type: "searchResults",
