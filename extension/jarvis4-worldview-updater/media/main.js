@@ -47,7 +47,10 @@
         hasReachedEnd = true;
         hasRequestedMore = false;
       } else {
-        highlights = highlights.concat(message.highlights);
+        // Deduplicate before appending (in case Shift+E was used)
+        const existingIds = new Set(highlights.map(h => h.id));
+        const newHighlights = message.highlights.filter(h => !existingIds.has(h.id));
+        highlights = highlights.concat(newHighlights);
         hasRequestedMore = false; // Allow requesting more again
       }
       // Initialize selection if not set
@@ -76,37 +79,63 @@
     } else if (message.type === 'bookHighlights') {
       // Insert book highlights adjacent to focused highlight
       const currentDisplayHighlights = isSearchMode ? searchResults : highlights;
-      const focusedHighlight = currentDisplayHighlights.find(h => h.id === selectedId);
+
+      // Remove loading placeholder
+      const withoutLoading = currentDisplayHighlights.filter(h => h.id !== '__loading__');
+
+      const focusedHighlight = withoutLoading.find(h => h.id === selectedId);
 
       if (!focusedHighlight) {
-        isLoading = false;
+        if (isSearchMode) {
+          searchResults = withoutLoading;
+        } else {
+          highlights = withoutLoading;
+        }
         render();
         return;
       }
 
       // Get existing IDs to avoid duplicates
-      const existingIds = new Set(currentDisplayHighlights.map(h => h.id));
+      const existingIds = new Set(withoutLoading.map(h => h.id));
 
       // Filter out duplicates from book highlights
       const newBookHighlights = message.highlights.filter(h => !existingIds.has(h.id));
 
+      // If no new highlights, just remove loading and return
+      if (newBookHighlights.length === 0) {
+        if (isSearchMode) {
+          searchResults = withoutLoading;
+        } else {
+          highlights = withoutLoading;
+        }
+        render();
+        return;
+      }
+
+      // Get the actual book_id from the fetched highlights
+      const actualBookId = newBookHighlights[0]?.book_id || focusedHighlight.book_id;
+
+      // Update the focused highlight's book_id if it was 0 (from search)
+      if (focusedHighlight.book_id === 0) {
+        focusedHighlight.book_id = actualBookId;
+      }
+
       // Find the position to insert: after the last highlight from the same book
-      const bookId = focusedHighlight.book_id;
-      let insertIndex = currentDisplayHighlights.findIndex(h => h.id === selectedId);
+      let insertIndex = withoutLoading.findIndex(h => h.id === selectedId);
 
       // Move forward to find the last highlight from this book
       while (
-        insertIndex < currentDisplayHighlights.length - 1 &&
-        currentDisplayHighlights[insertIndex + 1].book_id === bookId
+        insertIndex < withoutLoading.length - 1 &&
+        withoutLoading[insertIndex + 1].book_id === actualBookId
       ) {
         insertIndex++;
       }
 
       // Insert new highlights after this position
       const result = [
-        ...currentDisplayHighlights.slice(0, insertIndex + 1),
+        ...withoutLoading.slice(0, insertIndex + 1),
         ...newBookHighlights,
-        ...currentDisplayHighlights.slice(insertIndex + 1)
+        ...withoutLoading.slice(insertIndex + 1)
       ];
 
       if (isSearchMode) {
@@ -115,7 +144,6 @@
         highlights = result;
       }
 
-      isLoading = false;
       render();
     } else if (message.type === 'startLoading') {
       isLoading = true;
@@ -372,7 +400,77 @@
         const focusedHighlight = displayHighlights.find(h => h.id === selectedId);
         if (!focusedHighlight) return;
 
-        isLoading = true;
+        // If book_id is 0 (from search results), we need to fetch the highlight to get book_id
+        if (focusedHighlight.book_id === 0) {
+          // Insert loading placeholder for search results too
+          const currentDisplayHighlights = isSearchMode ? searchResults : highlights;
+          const insertIndex = currentDisplayHighlights.findIndex(h => h.id === selectedId);
+
+          const loadingPlaceholder = {
+            id: '__loading__',
+            text: '⏳ Loading more highlights from this book...',
+            source_title: focusedHighlight.source_title,
+            source_author: focusedHighlight.source_author,
+            book_id: 0,
+            snooze_count: 0
+          };
+
+          const newList = [
+            ...currentDisplayHighlights.slice(0, insertIndex + 1),
+            loadingPlaceholder,
+            ...currentDisplayHighlights.slice(insertIndex + 1)
+          ];
+
+          if (isSearchMode) {
+            searchResults = newList;
+          } else {
+            highlights = newList;
+          }
+
+          render();
+
+          vscode.postMessage({
+            type: 'fetchBookHighlightsById',
+            highlightId: focusedHighlight.id
+          });
+          return;
+        }
+
+        // Find the last highlight from this book to insert loading spinner after it
+        const currentDisplayHighlights = isSearchMode ? searchResults : highlights;
+        const bookId = focusedHighlight.book_id;
+        let insertIndex = currentDisplayHighlights.findIndex(h => h.id === selectedId);
+
+        // Move forward to find the last highlight from this book
+        while (
+          insertIndex < currentDisplayHighlights.length - 1 &&
+          currentDisplayHighlights[insertIndex + 1].book_id === bookId
+        ) {
+          insertIndex++;
+        }
+
+        // Insert a loading placeholder highlight at the end of the book group
+        const loadingPlaceholder = {
+          id: '__loading__',
+          text: '⏳ Loading more highlights from this book...',
+          source_title: focusedHighlight.source_title,
+          source_author: focusedHighlight.source_author,
+          book_id: bookId,
+          snooze_count: 0
+        };
+
+        const newList = [
+          ...currentDisplayHighlights.slice(0, insertIndex + 1),
+          loadingPlaceholder,
+          ...currentDisplayHighlights.slice(insertIndex + 1)
+        ];
+
+        if (isSearchMode) {
+          searchResults = newList;
+        } else {
+          highlights = newList;
+        }
+
         render();
 
         vscode.postMessage({

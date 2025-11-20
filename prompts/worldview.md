@@ -254,6 +254,7 @@ When user confirms they want source suggestions:
    - Spawn 5 simultaneous Exa MCP searches, one per category, 15 results each
    - Target essays, articles, books, and thoughtful content
    - Mention representative authors from each category in search queries
+   - Sources should be high quality: worksinprogress.co, nplusonemag.com, economist.com, foreignaffairs.com, 
 
 4. **Curate Findings**:
    - Select 10 most thoughtful and diverse pieces total

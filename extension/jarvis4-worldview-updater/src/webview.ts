@@ -125,6 +125,9 @@ export class WebviewManager {
           case "fetchBookHighlights":
             await this.handleFetchBookHighlights(message.bookId);
             break;
+          case "fetchBookHighlightsById":
+            await this.handleFetchBookHighlightsById(message.highlightId);
+            break;
         }
       },
       undefined,
@@ -360,7 +363,8 @@ export class WebviewManager {
             highlighted_at: highlight.highlightedAt || undefined,
             snooze_count: snoozeCount,
             book_id: highlight.bookId,
-            unique_url: highlight.book?.uniqueUrl || undefined,
+            url: highlight.url || undefined,
+            readwise_url: highlight.readwiseUrl || undefined,
           };
         }
       ) as HighlightWithMeta[];
@@ -371,6 +375,29 @@ export class WebviewManager {
       });
     } catch (error) {
       console.error("Fetch book highlights failed:", error);
+      vscode.window.showErrorMessage(`Fetch book highlights failed: ${error}`);
+    }
+  }
+
+  private async handleFetchBookHighlightsById(highlightId: string): Promise<void> {
+    if (!this.panel) {
+      return;
+    }
+
+    try {
+      log("handleFetchBookHighlightsById called with highlightId:", highlightId);
+
+      // First fetch the highlight to get its book_id
+      const highlight = await this.db.getHighlightState(highlightId);
+      if (!highlight || !highlight.bookId) {
+        vscode.window.showErrorMessage('Could not find book for this highlight');
+        return;
+      }
+
+      // Now fetch all highlights from that book
+      await this.handleFetchBookHighlights(highlight.bookId);
+    } catch (error) {
+      console.error("Fetch book highlights by ID failed:", error);
       vscode.window.showErrorMessage(`Fetch book highlights failed: ${error}`);
     }
   }
@@ -486,6 +513,7 @@ export class WebviewManager {
           <span>O: Open</span>
           <span>/: Search</span>
           <span>E: Similar</span>
+          <span>Shift+E: Book</span>
         </div>
       </div>
       <script src="${scriptUri}"></script>
